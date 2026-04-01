@@ -21,11 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'sync')
     steps:
-      - name: Decide sync window (KST 08:00-18:59)
+      - name: Decide sync window (KST 08:00-20:59)
         id: gate
         run: |
           KST_HOUR=$(TZ=Asia/Seoul date +%H)
-          if [ "$KST_HOUR" -ge 8 ] && [ "$KST_HOUR" -le 18 ]; then
+          if [ "$KST_HOUR" -ge 8 ] && [ "$KST_HOUR" -le 20 ]; then
             echo "run=true" >> $GITHUB_OUTPUT
           else
             echo "run=false" >> $GITHUB_OUTPUT
