@@ -1,15 +1,15 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using SeinServices.Api.Models.Chungyak.Responses;
 using SeinServices.Api.Models.Common;
 using SeinServices.Api.Services.Chungyak;
 
 namespace SeinServices.Api.Controllers.Chungyak
 {
-    /// <summary>
-    /// ¸ğÁı°ø°í µ¿±âÈ­ ¼öµ¿ ½ÇÇà API¸¦ Á¦°øÇÕ´Ï´Ù.
-    /// </summary>
     [ApiController]
     [Route("api/rcvhome-sync")]
+    /// <summary>
+    /// RcvhomeSyncController ê´€ë ¨ ê¸°ëŠ¥ì„ ì œê³µí•©ë‹ˆë‹¤.
+    /// </summary>
     public class RcvhomeSyncController : SeinServices.Api.Controllers.BaseController
     {
         private readonly RecruitSyncService _recruitSyncService;
@@ -23,13 +23,13 @@ namespace SeinServices.Api.Controllers.Chungyak
             _configuration = configuration;
         }
 
-        /// <summary>
-        /// ¸ğÁı°ø°í µ¿±âÈ­¸¦ ¼öµ¿À¸·Î Áï½Ã 1È¸ ½ÇÇàÇÕ´Ï´Ù.
-        /// </summary>
         [HttpGet("run-once")]
         [ProducesResponseType(typeof(SyncRunResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status500InternalServerError)]
+        /// <summary>
+        /// RunOnce ì‘ì—…ì„ ìˆ˜í–‰í•©ë‹ˆë‹¤.
+        /// </summary>
         public async Task<ActionResult<SyncRunResponseDto>> RunOnce(CancellationToken cancellationToken)
         {
             if (!TryAuthorizeJobRequest(_configuration, out var unauthorizedResult))

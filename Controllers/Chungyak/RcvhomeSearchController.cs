@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using SeinServices.Api.Models.Common;
 using SeinServices.Api.Models.Chungyak.Requests;
 using SeinServices.Api.Models.Chungyak.Responses;
@@ -6,11 +6,11 @@ using SeinServices.Api.Services.Chungyak;
 
 namespace SeinServices.Api.Controllers.Chungyak
 {
-    /// <summary>
-    /// Ã»¾à ¸ğÁı°ø°í Á¶È¸ API¸¦ Á¦°øÇÏ´Â ÄÁÆ®·Ñ·¯ÀÔ´Ï´Ù.
-    /// </summary>
     [ApiController]
     [Route("api/rcvhome-search")]
+    /// <summary>
+    /// RcvhomeSearchController ê´€ë ¨ ê¸°ëŠ¥ì„ ì œê³µí•©ë‹ˆë‹¤.
+    /// </summary>
     public class RcvhomeSearchController : SeinServices.Api.Controllers.BaseController
     {
         private readonly ChungyakSearchService _chungyakSearchService;
@@ -20,39 +20,38 @@ namespace SeinServices.Api.Controllers.Chungyak
             _chungyakSearchService = chungyakSearchService;
         }
 
-        /// <summary>
-        /// ¸ğÁı°ø°í ¸ñ·ÏÀ» Á¶È¸ÇÕ´Ï´Ù.
-        /// </summary>
         [HttpGet("rcvhomes")]
         [ProducesResponseType(typeof(List<RcvhomeResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status500InternalServerError)]
+        /// <summary>
+        /// GetRcvhomes ì‘ì—…ì„ ìˆ˜í–‰í•©ë‹ˆë‹¤.
+        /// </summary>
         public ActionResult<List<RcvhomeResponseDto>> GetRcvhomes([FromQuery] RcvhomesRequestDto request)
         {
             return ExecuteSearch(request, _chungyakSearchService.GetRcvhomes, "RCVHOME_QUERY_FAILED");
         }
 
-        /// <summary>
-        /// ¿À´Ã ±âÁØ ¸¶°¨ÀÓ¹Ú(D-7) ¸ğÁı°ø°í ¸ñ·ÏÀ» Á¶È¸ÇÕ´Ï´Ù.
-        /// </summary>
         [HttpGet("deadline-soon")]
         [ProducesResponseType(typeof(List<RcvhomeResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status500InternalServerError)]
+        /// <summary>
+        /// GetDeadlineSoonRcvhomes ì‘ì—…ì„ ìˆ˜í–‰í•©ë‹ˆë‹¤.
+        /// </summary>
         public ActionResult<List<RcvhomeResponseDto>> GetDeadlineSoonRcvhomes([FromQuery] RcvhomesRequestDto request)
         {
             return ExecuteSearch(request, _chungyakSearchService.GetDeadlineSoonRcvhomes, "DEADLINE_SOON_RCVHOME_QUERY_FAILED");
         }
 
-        /// <summary>
-        /// ¸ğÁı°ø°í °íÀ¯¹øÈ£¸¦ ±âÁØÀ¸·Î »ó¼¼ Á¤º¸¸¦ Á¶È¸ÇÕ´Ï´Ù.
-        /// </summary>
-        /// <param name="pblancId">¸ğÁı°ø°í °íÀ¯¹øÈ£</param>
         [HttpGet("rcvhomes/{pblancId}")]
         [ProducesResponseType(typeof(RcvhomeDetailResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status500InternalServerError)]
+        /// <summary>
+        /// GetRcvhomeDetail ì‘ì—…ì„ ìˆ˜í–‰í•©ë‹ˆë‹¤.
+        /// </summary>
         public ActionResult<RcvhomeDetailResponseDto> GetRcvhomeDetail(string pblancId)
         {
             if (string.IsNullOrWhiteSpace(pblancId))
@@ -85,11 +84,6 @@ namespace SeinServices.Api.Controllers.Chungyak
             }
         }
 
-        /// <summary>
-        /// ¿äÃ» °ËÁõ°ú °øÅë ¿¹¿Ü Ã³¸®¸¦ ¼öÇàÇÏ´Â ÇïÆÛ ¸Ş¼­µåÀÔ´Ï´Ù.
-        /// ½ÇÁ¦ °Ë»ö ·ÎÁ÷Àº searchFunc ¸Å°³º¯¼ö·Î Àü´ŞµÈ ÇÔ¼ö¸¦ ÅëÇØ ¼öÇàµË´Ï´Ù.
-        /// errorCode ¸Å°³º¯¼ö´Â ¿¹¿Ü ¹ß»ı ½Ã ¹İÈ¯ÇÒ ¿¡·¯ ÀÀ´äÀÇ ÄÚµå·Î »ç¿ëµË´Ï´Ù.
-        /// </summary> 
         private ActionResult<List<RcvhomeResponseDto>> ExecuteSearch(
             RcvhomesRequestDto request,
             Func<RcvhomesRequestDto, List<RcvhomeResponseDto>> searchFunc,
@@ -99,7 +93,7 @@ namespace SeinServices.Api.Controllers.Chungyak
             {
                 return BadRequest(CreateErrorResponse(
                     "INVALID_STATUS",
-                    "Status must be one of: ÀüÃ¼, Á¢¼ö¿¹Á¤, Á¢¼öÁß, Á¢¼ö¸¶°¨."));
+                    "Status must be one of: ì „ì²´, ì ‘ìˆ˜ì˜ˆì •, ì ‘ìˆ˜ì¤‘, ì ‘ìˆ˜ë§ˆê°."));
             }
 
             if (!_chungyakSearchService.IsValidDateRange(request.BeginFrom, request.BeginTo))

@@ -3,10 +3,13 @@ using SeinServices.Api.Models.Chungyak.Responses;
 
 namespace SeinServices.Api.Data.Chungyak
 {
+    /// <summary>
+    /// DBHelper 관련 기능을 제공합니다.
+    /// </summary>
     public partial class DBHelper
     {
         /// <summary>
-        /// 모집공고 고유번호를 기준으로 상세 정보를 1건 조회합니다.
+        /// GetRcvHomeDetail 작업을 수행합니다.
         /// </summary>
         public RcvhomeDetailResponseDto? GetRcvHomeDetail(string pblancId)
         {

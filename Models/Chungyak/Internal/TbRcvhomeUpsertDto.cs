@@ -1,5 +1,8 @@
-namespace SeinServices.Api.Models.Chungyak.Internal
+﻿namespace SeinServices.Api.Models.Chungyak.Internal
 {
+    /// <summary>
+    /// TbRcvhomeUpsertDto 관련 기능을 제공합니다.
+    /// </summary>
     public class TbRcvhomeUpsertDto
     {
         public string PblancId { get; set; } = string.Empty;

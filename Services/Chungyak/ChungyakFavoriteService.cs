@@ -5,7 +5,7 @@ using SeinServices.Api.Models.Chungyak.Responses;
 namespace SeinServices.Api.Services.Chungyak
 {
     /// <summary>
-    /// 청약 모집공고 즐겨찾기 등록/해제 기능을 처리합니다.
+    /// ChungyakFavoriteService 관련 기능을 제공합니다.
     /// </summary>
     public class ChungyakFavoriteService
     {
@@ -16,6 +16,9 @@ namespace SeinServices.Api.Services.Chungyak
             _dbHelper = dbHelper;
         }
 
+        /// <summary>
+        /// AddFavorite 작업을 수행합니다.
+        /// </summary>
         public FavoriteMutationResponseDto? AddFavorite(string pblancId)
         {
             if (string.IsNullOrWhiteSpace(pblancId))
@@ -40,6 +43,9 @@ namespace SeinServices.Api.Services.Chungyak
             };
         }
 
+        /// <summary>
+        /// RemoveFavorite 작업을 수행합니다.
+        /// </summary>
         public FavoriteMutationResponseDto? RemoveFavorite(string pblancId)
         {
             if (string.IsNullOrWhiteSpace(pblancId))

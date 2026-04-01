@@ -1,13 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using SeinServices.Api.Models.Common;
 
 namespace SeinServices.Api.Controllers.Chungyak
 {
-    /// <summary>
-    /// Timer Trigger ±â¹İ ¹èÄ¡ È£ÃâÀ» À§ÇÑ ±ú¿ì±â/Çï½º Ã¼Å© API¸¦ Á¦°øÇÕ´Ï´Ù.
-    /// </summary>
     [ApiController]
     [Route("api/job-trigger")]
+    /// <summary>
+    /// JobTriggerController ê´€ë ¨ ê¸°ëŠ¥ì„ ì œê³µí•©ë‹ˆë‹¤.
+    /// </summary>
     public class JobTriggerController : SeinServices.Api.Controllers.BaseController
     {
         private readonly IConfiguration _configuration;
@@ -17,13 +17,13 @@ namespace SeinServices.Api.Controllers.Chungyak
             _configuration = configuration;
         }
 
-        /// <summary>
-        /// ¾Û ¿ú¾÷À» À§ÇØ ºü¸£°Ô ÀÀ´äÇÏ´Â °æ·® ¿£µåÆ÷ÀÎÆ®ÀÔ´Ï´Ù.
-        /// </summary>
         [HttpGet("warmup")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status500InternalServerError)]
+        /// <summary>
+        /// Warmup ì‘ì—…ì„ ìˆ˜í–‰í•©ë‹ˆë‹¤.
+        /// </summary>
         public ActionResult Warmup()
         {
             if (!TryAuthorizeJobRequest(_configuration, out var unauthorizedResult))

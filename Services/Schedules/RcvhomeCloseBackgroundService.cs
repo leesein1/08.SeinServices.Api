@@ -1,9 +1,9 @@
-using SeinServices.Api.Services.Chungyak;
+﻿using SeinServices.Api.Services.Chungyak;
 
 namespace SeinServices.Api.Services.Schedules
 {
     /// <summary>
-    /// 매일 KST ?�벽 03:00??모집공고 마감 배치�??�행?�는 ?��?줄러?�니??
+    /// RcvhomeCloseBackgroundService 관련 기능을 제공합니다.
     /// </summary>
     public class RcvhomeCloseBackgroundService : BackgroundService
     {
@@ -20,10 +20,6 @@ namespace SeinServices.Api.Services.Schedules
             _logger = logger;
         }
 
-        /// <summary>
-        /// ?�벽 마감 ?��?�?루프�??�행?�니??
-        /// </summary>
-        /// <param name="stoppingToken">?�비??중�? ?�큰</param>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Rcvhome close scheduler started. Daily at 03:00 KST.");

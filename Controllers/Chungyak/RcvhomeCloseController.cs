@@ -1,15 +1,15 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using SeinServices.Api.Models.Chungyak.Responses;
 using SeinServices.Api.Models.Common;
 using SeinServices.Api.Services.Chungyak;
 
 namespace SeinServices.Api.Controllers.Chungyak
 {
-    /// <summary>
-    /// ¸ğÁı°ø°í ¸¶°¨ ¹èÄ¡ ¼öµ¿ ½ÇÇà API¸¦ Á¦°øÇÕ´Ï´Ù.
-    /// </summary>
     [ApiController]
     [Route("api/rcvhome-close")]
+    /// <summary>
+    /// RcvhomeCloseController ê´€ë ¨ ê¸°ëŠ¥ì„ ì œê³µí•©ë‹ˆë‹¤.
+    /// </summary>
     public class RcvhomeCloseController : SeinServices.Api.Controllers.BaseController
     {
         private readonly RcvhomeCloseService _rcvhomeCloseService;
@@ -23,13 +23,13 @@ namespace SeinServices.Api.Controllers.Chungyak
             _configuration = configuration;
         }
 
-        /// <summary>
-        /// ¸ğÁı°ø°í ¸¶°¨ ¹èÄ¡¸¦ ¼öµ¿À¸·Î Áï½Ã 1È¸ ½ÇÇàÇÕ´Ï´Ù.
-        /// </summary>
         [HttpGet("run-once")]
         [ProducesResponseType(typeof(CloseRunResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status500InternalServerError)]
+        /// <summary>
+        /// RunOnce ì‘ì—…ì„ ìˆ˜í–‰í•©ë‹ˆë‹¤.
+        /// </summary>
         public async Task<ActionResult<CloseRunResponseDto>> RunOnce(CancellationToken cancellationToken)
         {
             if (!TryAuthorizeJobRequest(_configuration, out var unauthorizedResult))

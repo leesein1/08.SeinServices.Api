@@ -1,7 +1,7 @@
 ﻿namespace SeinServices.Api.Models.Chungyak.Responses
 {
     /// <summary>
-    /// Detail response for a single recruit announcement.
+    /// RcvhomeDetailResponseDto 관련 기능을 제공합니다.
     /// </summary>
     public class RcvhomeDetailResponseDto
     {

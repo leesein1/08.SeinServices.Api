@@ -1,11 +1,17 @@
-using System.Data;
+﻿using System.Data;
 using Microsoft.Data.SqlClient;
 using SeinServices.Api.Models.Chungyak.Internal;
 
 namespace SeinServices.Api.Data.Chungyak
 {
+    /// <summary>
+    /// DBHelper 관련 기능을 제공합니다.
+    /// </summary>
     public partial class DBHelper
     {
+        /// <summary>
+        /// RcvhomeSaveResult 상태 값을 정의합니다.
+        /// </summary>
         public enum RcvhomeSaveResult
         {
             None,
@@ -13,6 +19,9 @@ namespace SeinServices.Api.Data.Chungyak
             Updated
         }
 
+        /// <summary>
+        /// SaveRcvhome 작업을 수행합니다.
+        /// </summary>
         public RcvhomeSaveResult SaveRcvhome(TbRcvhomeUpsertDto e)
         {
             ArgumentNullException.ThrowIfNull(e);
@@ -172,6 +181,9 @@ namespace SeinServices.Api.Data.Chungyak
             return RcvhomeSaveResult.None;
         }
 
+        /// <summary>
+        /// SaveRcvhomeHist 작업을 수행합니다.
+        /// </summary>
         public bool SaveRcvhomeHist(string pblancId, string changeType)
         {
             if (string.IsNullOrWhiteSpace(pblancId))
@@ -210,6 +222,9 @@ namespace SeinServices.Api.Data.Chungyak
             return cmd.ExecuteNonQuery() == 1;
         }
 
+        /// <summary>
+        /// SaveAccLog 작업을 수행합니다.
+        /// </summary>
         public void SaveAccLog(string actionName, string resultCode, string? actionDesc = null)
         {
             if (string.IsNullOrWhiteSpace(actionName))

@@ -1,19 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
+ï»¿using Microsoft.AspNetCore.Mvc;
 using SeinServices.Api.Models.Common;
 
 namespace SeinServices.Api.Controllers
 {
     /// <summary>
-    /// °øÅë API ÀÀ´ä ±â´ÉÀ» Á¦°øÇÏ´Â ±âº» ÄÁÆ®·Ñ·¯ÀÔ´Ï´Ù.
+    /// BaseController ê´€ë ¨ ê¸°ëŠ¥ì„ ì œê³µí•©ë‹ˆë‹¤.
     /// </summary>
     public abstract class BaseController : ControllerBase
     {
-        /// <summary>
-        /// ¿¡·¯ ÀÀ´ä °´Ã¼¸¦ »ı¼ºÇÕ´Ï´Ù.
-        /// </summary>
-        /// <param name="code">¿¡·¯ ÄÚµå</param>
-        /// <param name="message">¿¡·¯ ¸Ş½ÃÁö</param>
-        /// <returns>¿¡·¯ ÀÀ´ä °´Ã¼</returns>
         protected ErrorResponseDto CreateErrorResponse(string code, string message)
         {
             return new ErrorResponseDto
@@ -24,9 +18,6 @@ namespace SeinServices.Api.Controllers
             };
         }
 
-        /// <summary>
-        /// Timer Trigger endpoint ¿äÃ»ÀÇ API key¸¦ °ËÁõÇÕ´Ï´Ù.
-        /// </summary>
         protected bool TryAuthorizeJobRequest(IConfiguration configuration, out ActionResult? unauthorizedResult)
         {
             var configuredApiKey = configuration["JobTrigger:ApiKey"];

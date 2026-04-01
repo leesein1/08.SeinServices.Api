@@ -1,9 +1,9 @@
-using SeinServices.Api.Services.Chungyak;
+ï»¿using SeinServices.Api.Services.Chungyak;
 
 namespace SeinServices.Api.Services.Schedules
 {
     /// <summary>
-    /// ë§??•ì‹œ??ëª¨ì§‘ê³µê³  ?™ê¸°?”ë? ?˜í–‰?˜ëŠ” ë°±ê·¸?¼ìš´???¤ì?ì¤„ëŸ¬?…ë‹ˆ??
+    /// RecruitSyncBackgroundService ê´€ë ¨ ê¸°ëŠ¥ì„ ì œê³µí•©ë‹ˆë‹¤.
     /// </summary>
     public class RecruitSyncBackgroundService : BackgroundService
     {
@@ -20,10 +20,6 @@ namespace SeinServices.Api.Services.Schedules
             _logger = logger;
         }
 
-        /// <summary>
-        /// ?¤ì?ì¤?ë£¨í”„ë¥??¤í–‰?©ë‹ˆ?? KST ê¸°ì? 08??18?œì—ë§??™ê¸°?”ë? ?¸ì¶œ?©ë‹ˆ??
-        /// </summary>
-        /// <param name="stoppingToken">?œë¹„??ì¤‘ì? ? í°</param>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Recruit scheduler started. Active window: 08:00~18:59 (KST), hourly on the hour.");
@@ -75,17 +71,11 @@ namespace SeinServices.Api.Services.Schedules
             _logger.LogInformation("Recruit scheduler stopped.");
         }
 
-        /// <summary>
-        /// ?„ì¬ KST ?œê°„??ë°˜í™˜?©ë‹ˆ??
-        /// </summary>
         private static DateTime GetKstNow()
         {
             return TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, KoreaTimeZone).DateTime;
         }
 
-        /// <summary>
-        /// ?¤í–‰ ?˜ê²½??ë§ëŠ” ?œêµ­ ?œì????€?„ì¡´ ê°ì²´ë¥?ì¡°íšŒ?©ë‹ˆ??
-        /// </summary>
         private static TimeZoneInfo ResolveKoreaTimeZone()
         {
             try

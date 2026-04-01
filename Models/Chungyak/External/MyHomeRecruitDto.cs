@@ -1,24 +1,36 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace SeinServices.Api.Models.Chungyak.External
 {
+    /// <summary>
+    /// MyHomeRecruitDto 관련 기능을 제공합니다.
+    /// </summary>
     public class MyHomeRecruitDto
     {
         public MyHomeRecruitResponse? response { get; set; }
     }
 
+    /// <summary>
+    /// MyHomeRecruitResponse 관련 기능을 제공합니다.
+    /// </summary>
     public class MyHomeRecruitResponse
     {
         public MyHomeRecruitHeader? header { get; set; }
         public MyHomeRecruitBody? body { get; set; }
     }
 
+    /// <summary>
+    /// MyHomeRecruitHeader 관련 기능을 제공합니다.
+    /// </summary>
     public class MyHomeRecruitHeader
     {
         public string? resultCode { get; set; }
         public string? resultMsg { get; set; }
     }
 
+    /// <summary>
+    /// MyHomeRecruitBody 관련 기능을 제공합니다.
+    /// </summary>
     public class MyHomeRecruitBody
     {
         public string? totalCount { get; set; }
@@ -27,6 +39,9 @@ namespace SeinServices.Api.Models.Chungyak.External
         public List<MyHomeRecruitItem>? item { get; set; }
     }
 
+    /// <summary>
+    /// MyHomeRecruitItem 관련 기능을 제공합니다.
+    /// </summary>
     public class MyHomeRecruitItem
     {
         public string pblancId { get; set; } = string.Empty;

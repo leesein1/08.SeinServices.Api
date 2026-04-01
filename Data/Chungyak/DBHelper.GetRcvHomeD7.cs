@@ -1,13 +1,13 @@
-using Microsoft.Data.SqlClient;
+Ôªøusing Microsoft.Data.SqlClient;
 using SeinServices.Api.Models.Chungyak.Responses;
 
 namespace SeinServices.Api.Data.Chungyak
 {
+    /// <summary>
+    /// DBHelper Í¥ÄÎ†® Í∏∞Îä•ÏùÑ Ï†úÍ≥µÌï©ÎãàÎã§.
+    /// </summary>
     public partial class DBHelper
     {
-        /// <summary>
-        /// ø¿¥√ ±‚¡ÿ ¡¢ºˆøπ¡§ 7¿œ ¿Ã≥ª ∂«¥¬ ¡¢ºˆ¡ﬂ ∞¯∞Ì∏¶ ¡∂»∏«’¥œ¥Ÿ.
-        /// </summary>
         public List<RcvhomeResponseDto> GetRcvHomeD7(
             string? keyword,
             string? status,
@@ -22,39 +22,39 @@ namespace SeinServices.Api.Data.Chungyak
 
             cmd.CommandText = @"
                 SELECT
-                    ROW_NUMBER() OVER (ORDER BY a.BEGIN_DE DESC, a.PBLANC_ID) AS º¯º≠,
-                    a.PBLANC_ID AS ∞Ì¿Øπ¯»£,
-                    a.PBLANC_NM AS ∞¯∞Ì∏Ì,
-                    ISNULL(a.HSMP_NM, N'') AS ¥‹¡ˆ∏Ì,
+                    ROW_NUMBER() OVER (ORDER BY a.BEGIN_DE DESC, a.PBLANC_ID) AS ÏàúÏÑú,
+                    a.PBLANC_ID AS Í≥†Ïú†Î≤àÌò∏,
+                    a.PBLANC_NM AS Í≥µÍ≥†Î™Ö,
+                    ISNULL(a.HSMP_NM, N'') AS Îã®ÏßÄÎ™Ö,
                     CASE
                         WHEN a.BEGIN_DE IS NULL OR a.END_DE IS NULL THEN ISNULL(a.STTUS_NM, N'')
-                        WHEN CAST(GETDATE() AS date) < a.BEGIN_DE THEN N'¡¢ºˆøπ¡§'
-                        WHEN CAST(GETDATE() AS date) > a.END_DE THEN N'¡¢ºˆ∏∂∞®'
-                        ELSE N'¡¢ºˆ¡ﬂ'
-                    END AS ªÛ≈¬,
-                    a.BEGIN_DE AS ¡¢ºˆΩ√¿€¿œ,
-                    a.END_DE   AS ¡¢ºˆ∏∂∞®¿œ,
+                        WHEN CAST(GETDATE() AS date) < a.BEGIN_DE THEN N'Ï†ëÏàòÏòàÏ†ï'
+                        WHEN CAST(GETDATE() AS date) > a.END_DE THEN N'Ï†ëÏàòÎßàÍ∞ê'
+                        ELSE N'Ï†ëÏàòÏ§ë'
+                    END AS ÏÉÅÌÉú,
+                    a.BEGIN_DE AS Ï†ëÏàòÏãúÏûëÏùº,
+                    a.END_DE   AS Ï†ëÏàòÎßàÍ∞êÏùº,
                     CASE
                         WHEN a.BEGIN_DE IS NULL OR a.END_DE IS NULL THEN N''
                         ELSE CONVERT(nvarchar(10), a.BEGIN_DE, 23) + N' ~ ' + CONVERT(nvarchar(10), a.END_DE, 23)
-                    END AS ¡¢ºˆ±‚∞£,
-                    LTRIM(RTRIM(ISNULL(a.BRTC_NM, N'') + N' ' + ISNULL(a.SIGNGU_NM, N'') + N' ' + ISNULL(a.FULL_ADRES, N''))) AS ¡÷º“,
-                    ISNULL(a.HOUSE_SN, N'') AS ∞¯±ﬁ¿Ø«¸,
+                    END AS Ï†ëÏàòÍ∏∞Í∞Ñ,
+                    LTRIM(RTRIM(ISNULL(a.BRTC_NM, N'') + N' ' + ISNULL(a.SIGNGU_NM, N'') + N' ' + ISNULL(a.FULL_ADRES, N''))) AS Ï£ºÏÜå,
+                    ISNULL(a.HOUSE_SN, N'') AS Í≥µÍ∏âÏú†Ìòï,
                     ISNULL(a.URL, N'') AS URL,
-                    CASE WHEN s.PBLANC_ID IS NULL THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END AS ¡Ò∞‹√£±‚,
+                    CASE WHEN s.PBLANC_ID IS NULL THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END AS Ï¶êÍ≤®Ï∞æÍ∏∞,
                     CASE
                         WHEN a.BEGIN_DE IS NULL OR a.END_DE IS NULL THEN N''
                         WHEN CAST(GETDATE() AS date) < a.BEGIN_DE
                             THEN N'D-' + CAST(DATEDIFF(day, CAST(GETDATE() AS date), a.BEGIN_DE) AS nvarchar(10))
                         WHEN CAST(GETDATE() AS date) > a.END_DE
-                            THEN N'∏∂∞®'
+                            THEN N'ÎßàÍ∞ê'
                         ELSE
                             CASE
                                 WHEN DATEDIFF(day, CAST(GETDATE() AS date), a.END_DE) <= 7
                                     THEN N'D-' + CAST(DATEDIFF(day, CAST(GETDATE() AS date), a.END_DE) AS nvarchar(10))
-                                ELSE N'¡¢ºˆ¡ﬂ'
+                                ELSE N'Ï†ëÏàòÏ§ë'
                             END
-                    END AS ≥≤¿∫¿œºˆ
+                    END AS ÎÇ®ÏùÄÏùºÏàò
                 FROM dbo.TB_RCVHOME a
                 LEFT JOIN dbo.TB_SUBSCRIBE s ON s.PBLANC_ID = a.PBLANC_ID
                 WHERE 1 = 1
@@ -82,19 +82,19 @@ namespace SeinServices.Api.Data.Chungyak
                 cmd.Parameters.AddWithValue("@keyword", $"%{keyword.Trim()}%");
             }
 
-            if (!string.IsNullOrWhiteSpace(status) && status != "¿¸√º")
+            if (!string.IsNullOrWhiteSpace(status) && status != "Ï†ÑÏ≤¥")
             {
-                if (status == "¡¢ºˆøπ¡§")
+                if (status == "Ï†ëÏàòÏòàÏ†ï")
                     cmd.CommandText += " AND CAST(GETDATE() AS date) < a.BEGIN_DE";
-                else if (status == "¡¢ºˆ¡ﬂ")
+                else if (status == "Ï†ëÏàòÏ§ë")
                     cmd.CommandText += " AND CAST(GETDATE() AS date) BETWEEN a.BEGIN_DE AND a.END_DE";
-                else if (status == "¡¢ºˆ∏∂∞®")
+                else if (status == "Ï†ëÏàòÎßàÍ∞ê")
                     cmd.CommandText += " AND CAST(GETDATE() AS date) > a.END_DE";
             }
 
             if (beginFrom.HasValue && beginTo.HasValue)
             {
-                var dateColumn = status == "¡¢ºˆ∏∂∞®" ? "a.END_DE" : "a.BEGIN_DE";
+                var dateColumn = status == "Ï†ëÏàòÎßàÍ∞ê" ? "a.END_DE" : "a.BEGIN_DE";
                 cmd.CommandText += $" AND {dateColumn} >= @beginFrom AND {dateColumn} <= @beginTo";
                 cmd.Parameters.AddWithValue("@beginFrom", beginFrom.Value.Date);
                 cmd.Parameters.AddWithValue("@beginTo", beginTo.Value.Date);
@@ -113,19 +113,19 @@ namespace SeinServices.Api.Data.Chungyak
             {
                 list.Add(new RcvhomeResponseDto
                 {
-                    º¯º≠ = rd.GetInt64(rd.GetOrdinal("º¯º≠")),
-                    ∞Ì¿Øπ¯»£ = rd["∞Ì¿Øπ¯»£"]?.ToString() ?? string.Empty,
-                    ∞¯∞Ì∏Ì = rd["∞¯∞Ì∏Ì"]?.ToString() ?? string.Empty,
-                    ¥‹¡ˆ∏Ì = rd["¥‹¡ˆ∏Ì"]?.ToString() ?? string.Empty,
-                    ªÛ≈¬ = rd["ªÛ≈¬"]?.ToString() ?? string.Empty,
-                    ¡¢ºˆΩ√¿€¿œ = rd["¡¢ºˆΩ√¿€¿œ"] == DBNull.Value ? null : (DateTime?)rd["¡¢ºˆΩ√¿€¿œ"],
-                    ¡¢ºˆ∏∂∞®¿œ = rd["¡¢ºˆ∏∂∞®¿œ"] == DBNull.Value ? null : (DateTime?)rd["¡¢ºˆ∏∂∞®¿œ"],
-                    ¡¢ºˆ±‚∞£ = rd["¡¢ºˆ±‚∞£"]?.ToString() ?? string.Empty,
-                    ¡÷º“ = rd["¡÷º“"]?.ToString() ?? string.Empty,
-                    ∞¯±ﬁ¿Ø«¸ = rd["∞¯±ﬁ¿Ø«¸"]?.ToString() ?? string.Empty,
-                    ≥≤¿∫¿œºˆ = rd["≥≤¿∫¿œºˆ"]?.ToString() ?? string.Empty,
+                    ÏàúÏÑú = rd.GetInt64(rd.GetOrdinal("ÏàúÏÑú")),
+                    Í≥†Ïú†Î≤àÌò∏ = rd["Í≥†Ïú†Î≤àÌò∏"]?.ToString() ?? string.Empty,
+                    Í≥µÍ≥†Î™Ö = rd["Í≥µÍ≥†Î™Ö"]?.ToString() ?? string.Empty,
+                    Îã®ÏßÄÎ™Ö = rd["Îã®ÏßÄÎ™Ö"]?.ToString() ?? string.Empty,
+                    ÏÉÅÌÉú = rd["ÏÉÅÌÉú"]?.ToString() ?? string.Empty,
+                    Ï†ëÏàòÏãúÏûëÏùº = rd["Ï†ëÏàòÏãúÏûëÏùº"] == DBNull.Value ? null : (DateTime?)rd["Ï†ëÏàòÏãúÏûëÏùº"],
+                    Ï†ëÏàòÎßàÍ∞êÏùº = rd["Ï†ëÏàòÎßàÍ∞êÏùº"] == DBNull.Value ? null : (DateTime?)rd["Ï†ëÏàòÎßàÍ∞êÏùº"],
+                    Ï†ëÏàòÍ∏∞Í∞Ñ = rd["Ï†ëÏàòÍ∏∞Í∞Ñ"]?.ToString() ?? string.Empty,
+                    Ï£ºÏÜå = rd["Ï£ºÏÜå"]?.ToString() ?? string.Empty,
+                    Í≥µÍ∏âÏú†Ìòï = rd["Í≥µÍ∏âÏú†Ìòï"]?.ToString() ?? string.Empty,
+                    ÎÇ®ÏùÄÏùºÏàò = rd["ÎÇ®ÏùÄÏùºÏàò"]?.ToString() ?? string.Empty,
                     URL = rd["URL"]?.ToString() ?? string.Empty,
-                    ¡Ò∞‹√£±‚ = rd["¡Ò∞‹√£±‚"] != DBNull.Value && (bool)rd["¡Ò∞‹√£±‚"]
+                    Ï¶êÍ≤®Ï∞æÍ∏∞ = rd["Ï¶êÍ≤®Ï∞æÍ∏∞"] != DBNull.Value && (bool)rd["Ï¶êÍ≤®Ï∞æÍ∏∞"]
                 });
             }
 

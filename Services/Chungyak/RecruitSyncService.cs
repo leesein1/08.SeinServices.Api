@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using SeinServices.Api.Models.Chungyak.External;
@@ -9,7 +9,7 @@ using static SeinServices.Api.Data.Chungyak.DBHelper;
 namespace SeinServices.Api.Services.Chungyak
 {
     /// <summary>
-    /// MyHome API ?�이?��? 조회??로컬 DB�??�기?�하�? 변�???Slack ?�림???�송?�니??
+    /// RecruitSyncService 관련 기능을 제공합니다.
     /// </summary>
     public class RecruitSyncService
     {
@@ -36,10 +36,8 @@ namespace SeinServices.Api.Services.Chungyak
         }
 
         /// <summary>
-        /// 모집공고 ?�기?��? 즉시 1???�행?�니??
+        /// RunOnceAsync 작업을 수행합니다.
         /// </summary>
-        /// <param name="cancellationToken">취소 ?�큰</param>
-        /// <returns>?�행 결과 ?�약</returns>
         public async Task<SyncRunResponseDto> RunOnceAsync(CancellationToken cancellationToken)
         {
             const string actionName = "SyncRecruitListToDbAsync";
@@ -218,17 +216,18 @@ namespace SeinServices.Api.Services.Chungyak
 
         private static string BuildSlackMessage(MyHomeRecruitItem item, bool isInsert)
         {
-            var title = isInsert ? "[?�규 모집공고 ?�록]" : "[모집공고 변�?";
+            var title = isInsert ? "[신규 모집공고 등록]" : "[모집공고 변경]";
             var link = string.IsNullOrWhiteSpace(item.pcUrl) ? item.url : item.pcUrl;
+
             return
                 $"{title}\n" +
                 $"- {item.pblancNm} ({item.pblancId})\n" +
-                $"- ?��?�? {item.hsmpNm}\n" +
-                $"- 지?? {item.brtcNm} {item.signguNm}\n" +
-                $"- ?�태: {item.sttusNm}\n" +
-                $"- 모집공고?? {ToDateDash(item.rcritPblancDe)}\n" +
-                $"- �?��기간: {ToDateDash(item.beginDe)} ~ {ToDateDash(item.endDe)}\n" +
-                $"- ?�첨?�발?�일: {ToDateDash(item.przwnerPresnatnDe)}\n" +
+                $"- 단지명: {item.hsmpNm}\n" +
+                $"- 지역: {item.brtcNm} {item.signguNm}\n" +
+                $"- 상태: {item.sttusNm}\n" +
+                $"- 모집공고일: {ToDateDash(item.rcritPblancDe)}\n" +
+                $"- 청약기간: {ToDateDash(item.beginDe)} ~ {ToDateDash(item.endDe)}\n" +
+                $"- 당첨자발표일: {ToDateDash(item.przwnerPresnatnDe)}\n" +
                 $"- 링크: {link}";
         }
 
@@ -310,4 +309,3 @@ namespace SeinServices.Api.Services.Chungyak
         }
     }
 }
-

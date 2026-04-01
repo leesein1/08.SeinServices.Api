@@ -1,10 +1,10 @@
-using SeinServices.Api.Data.Chungyak;
+﻿using SeinServices.Api.Data.Chungyak;
 using SeinServices.Api.Models.Chungyak.Internal;
 
 namespace SeinServices.Api.Services.Chungyak
 {
     /// <summary>
-    /// ?�기???�?�소 ?�터?�이?�의 DBHelper 기반 구현체입?�다.
+    /// RecruitSyncStore 관련 기능을 제공합니다.
     /// </summary>
     public class RecruitSyncStore : IRecruitSyncStore
     {
@@ -15,19 +15,22 @@ namespace SeinServices.Api.Services.Chungyak
             _dbHelper = dbHelper;
         }
 
-        /// <inheritdoc />
         public DBHelper.RcvhomeSaveResult SaveRcvhome(TbRcvhomeUpsertDto entity)
         {
             return _dbHelper.SaveRcvhome(entity);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// SaveRcvhomeHist 작업을 수행합니다.
+        /// </summary>
         public bool SaveRcvhomeHist(string pblancId, string changeType)
         {
             return _dbHelper.SaveRcvhomeHist(pblancId, changeType);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// SaveAccLog 작업을 수행합니다.
+        /// </summary>
         public void SaveAccLog(string actionName, string resultCode, string? actionDesc = null)
         {
             _dbHelper.SaveAccLog(actionName, resultCode, actionDesc);

@@ -1,7 +1,10 @@
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 
 namespace SeinServices.Api.Data.Chungyak
 {
+    /// <summary>
+    /// DBHelper 관련 기능을 제공합니다.
+    /// </summary>
     public partial class DBHelper
     {
         private readonly string _connectionString;
