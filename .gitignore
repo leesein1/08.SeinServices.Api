@@ -1,0 +1,23 @@
+# Build outputs
+bin/
+obj/
+
+# User/IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local secrets
+appsettings.Development.json
+appsettings.Local.json
+
+# Azure Functions local files
+local.settings.json

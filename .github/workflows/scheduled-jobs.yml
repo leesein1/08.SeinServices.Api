@@ -1,0 +1,82 @@
+name: Scheduled Jobs
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "sync or close"
+        required: true
+        default: "sync"
+  schedule:
+    - cron: "0 * * * *"   # hourly (UTC) for sync window check
+    - cron: "0 18 * * *"  # 03:00 KST close job
+
+env:
+  WEBAPP_BASE_URL: ${{ secrets.WEBAPP_BASE_URL }}
+  JOB_TRIGGER_API_KEY: ${{ secrets.JOB_TRIGGER_API_KEY }}
+  WARMUP_DELAY_SECONDS: ${{ vars.WARMUP_DELAY_SECONDS }}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'sync')
+    steps:
+      - name: Decide sync window (KST 08:00-18:59)
+        id: gate
+        run: |
+          KST_HOUR=$(TZ=Asia/Seoul date +%H)
+          if [ "$KST_HOUR" -ge 8 ] && [ "$KST_HOUR" -le 18 ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Warmup
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          curl -sS --fail --retry 3 --retry-delay 5 \
+            -H "X-Job-Key: $JOB_TRIGGER_API_KEY" \
+            "$WEBAPP_BASE_URL/api/job-trigger/warmup"
+
+      - name: Wait for warmup
+        if: steps.gate.outputs.run == 'true'
+        run: sleep ${WARMUP_DELAY_SECONDS:-30}
+
+      - name: Run sync job
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          curl -sS --fail --retry 3 --retry-delay 5 \
+            -H "X-Job-Key: $JOB_TRIGGER_API_KEY" \
+            "$WEBAPP_BASE_URL/api/rcvhome-sync/run-once"
+
+  close:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'close')
+    steps:
+      - name: Check close schedule (03:00 KST)
+        id: gate
+        run: |
+          KST_HOUR=$(TZ=Asia/Seoul date +%H)
+          if [ "$KST_HOUR" -eq 3 ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Warmup
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          curl -sS --fail --retry 3 --retry-delay 5 \
+            -H "X-Job-Key: $JOB_TRIGGER_API_KEY" \
+            "$WEBAPP_BASE_URL/api/job-trigger/warmup"
+
+      - name: Wait for warmup
+        if: steps.gate.outputs.run == 'true'
+        run: sleep ${WARMUP_DELAY_SECONDS:-30}
+
+      - name: Run close job
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          curl -sS --fail --retry 3 --retry-delay 5 \
+            -H "X-Job-Key: $JOB_TRIGGER_API_KEY" \
+            "$WEBAPP_BASE_URL/api/rcvhome-close/run-once"

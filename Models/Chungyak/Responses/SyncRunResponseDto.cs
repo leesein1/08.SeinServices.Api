@@ -1,0 +1,26 @@
+namespace SeinServices.Api.Models.Chungyak.Responses
+{
+    /// <summary>
+    /// ?¨ì¼ ?™ê¸°???¤í–‰ ê²°ê³¼ë¥?ë°˜í™˜?˜ëŠ” ?‘ë‹µ DTO?…ë‹ˆ??
+    /// </summary>
+    public class SyncRunResponseDto
+    {
+        /// <summary>?¤í–‰ ?±ê³µ ?¬ë??…ë‹ˆ??</summary>
+        public bool Success { get; set; }
+        /// <summary>?´ë? ?¤í–‰ ì¤‘ì´???¤í‚µ?˜ì—ˆ?”ì? ?¬ë??…ë‹ˆ??</summary>
+        public bool Skipped { get; set; }
+        /// <summary>?¤í–‰ ê²°ê³¼ ë©”ì‹œì§€?…ë‹ˆ??</summary>
+        public string Message { get; set; } = string.Empty;
+        /// <summary>ì²˜ë¦¬ ?€??ì´?ê±´ìˆ˜?…ë‹ˆ??</summary>
+        public int TotalCount { get; set; }
+        /// <summary>? ê·œ ?±ë¡ ê±´ìˆ˜?…ë‹ˆ??</summary>
+        public int InsertCount { get; set; }
+        /// <summary>ë³€ê²?ë°˜ì˜ ê±´ìˆ˜?…ë‹ˆ??</summary>
+        public int UpdateCount { get; set; }
+        /// <summary>ë³€ê²??†ìŒ ê±´ìˆ˜?…ë‹ˆ??</summary>
+        public int NoneCount { get; set; }
+        /// <summary>ì²˜ë¦¬ ?¤ë¥˜ ê±´ìˆ˜?…ë‹ˆ??</summary>
+        public int ErrorCount { get; set; }
+    }
+}
+
