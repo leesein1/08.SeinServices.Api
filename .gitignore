@@ -21,3 +21,4 @@ appsettings.Local.json
 
 # Azure Functions local files
 local.settings.json
+appsettings.json

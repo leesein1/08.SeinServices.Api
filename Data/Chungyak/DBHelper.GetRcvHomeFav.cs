@@ -17,7 +17,7 @@ namespace SeinServices.Api.Data.Chungyak
             var dt = new DataTable();
             var sql = new StringBuilder();
 
-            sql.AppendLine(@"
+            sql.AppendLine($@"
                 SELECT
                     ROW_NUMBER() OVER (ORDER BY a.BEGIN_DE DESC) AS 순서,
                     a.PBLANC_ID AS 고유번호,
@@ -25,8 +25,8 @@ namespace SeinServices.Api.Data.Chungyak
                     a.HSMP_NM   AS 단지명,
                     CASE
                         WHEN a.BEGIN_DE IS NULL OR a.END_DE IS NULL THEN ISNULL(a.STTUS_NM, N'')
-                        WHEN CAST(GETDATE() AS date) < a.BEGIN_DE THEN N'접수예정'
-                        WHEN CAST(GETDATE() AS date) > a.END_DE THEN N'접수마감'
+                        WHEN {KstTodaySql} < a.BEGIN_DE THEN N'접수예정'
+                        WHEN {KstTodaySql} > a.END_DE THEN N'접수마감'
                         ELSE N'접수중'
                     END AS 상태,
                     a.BEGIN_DE  AS 접수시작일,
@@ -39,9 +39,9 @@ namespace SeinServices.Api.Data.Chungyak
                     a.HOUSE_TY_NM AS 공급유형,
                     CASE
                         WHEN a.BEGIN_DE IS NULL OR a.END_DE IS NULL THEN N''
-                        WHEN CAST(GETDATE() AS date) < a.BEGIN_DE
-                            THEN N'D-' + CAST(DATEDIFF(day, CAST(GETDATE() AS date), a.BEGIN_DE) AS nvarchar(10))
-                        WHEN CAST(GETDATE() AS date) > a.END_DE
+                        WHEN {KstTodaySql} < a.BEGIN_DE
+                            THEN N'D-' + CAST(DATEDIFF(day, {KstTodaySql}, a.BEGIN_DE) AS nvarchar(10))
+                        WHEN {KstTodaySql} > a.END_DE
                             THEN N'마감'
                         ELSE N'접수중'
                     END AS 남은일수,
@@ -73,15 +73,15 @@ namespace SeinServices.Api.Data.Chungyak
             {
                 if (status == "접수예정")
                 {
-                    sql.AppendLine("AND CAST(GETDATE() AS date) < a.BEGIN_DE");
+                    sql.AppendLine($"AND {KstTodaySql} < a.BEGIN_DE");
                 }
                 else if (status == "접수중")
                 {
-                    sql.AppendLine("AND CAST(GETDATE() AS date) BETWEEN a.BEGIN_DE AND a.END_DE");
+                    sql.AppendLine($"AND {KstTodaySql} BETWEEN a.BEGIN_DE AND a.END_DE");
                 }
                 else if (status == "접수마감")
                 {
-                    sql.AppendLine("AND CAST(GETDATE() AS date) > a.END_DE");
+                    sql.AppendLine($"AND {KstTodaySql} > a.END_DE");
                 }
             }
 

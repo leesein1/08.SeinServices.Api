@@ -16,15 +16,15 @@ namespace SeinServices.Api.Data.Chungyak
             using var conn = CreateConnection();
             using var cmd = conn.CreateCommand();
 
-            cmd.CommandText = @"
+            cmd.CommandText = $@"
                 SELECT TOP 1
                     a.PBLANC_ID AS PblancId,
                     a.PBLANC_NM AS NoticeName,
                     ISNULL(a.HSMP_NM, N'') AS ComplexName,
                     CASE
                         WHEN a.BEGIN_DE IS NULL OR a.END_DE IS NULL THEN ISNULL(a.STTUS_NM, N'')
-                        WHEN CAST(GETDATE() AS date) < a.BEGIN_DE THEN N'접수예정'
-                        WHEN CAST(GETDATE() AS date) > a.END_DE THEN N'접수마감'
+                        WHEN {KstTodaySql} < a.BEGIN_DE THEN N'접수예정'
+                        WHEN {KstTodaySql} > a.END_DE THEN N'접수마감'
                         ELSE N'접수중'
                     END AS Status,
                     ISNULL(a.STTUS_NM, N'') AS RawStatus,
@@ -43,9 +43,9 @@ namespace SeinServices.Api.Data.Chungyak
                     ISNULL(a.HOUSE_TY_NM, N'') AS HouseTypeName,
                     CASE
                         WHEN a.BEGIN_DE IS NULL OR a.END_DE IS NULL THEN N''
-                        WHEN CAST(GETDATE() AS date) < a.BEGIN_DE
-                            THEN N'D-' + CAST(DATEDIFF(day, CAST(GETDATE() AS date), a.BEGIN_DE) AS nvarchar(10))
-                        WHEN CAST(GETDATE() AS date) > a.END_DE
+                        WHEN {KstTodaySql} < a.BEGIN_DE
+                            THEN N'D-' + CAST(DATEDIFF(day, {KstTodaySql}, a.BEGIN_DE) AS nvarchar(10))
+                        WHEN {KstTodaySql} > a.END_DE
                             THEN N'마감'
                         ELSE N'접수중'
                     END AS DdayText,

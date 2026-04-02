@@ -20,7 +20,7 @@ namespace SeinServices.Api.Data.Chungyak
             using var conn = CreateConnection();
             using var cmd = conn.CreateCommand();
 
-            cmd.CommandText = @"
+            cmd.CommandText = $@"
                 SELECT
                     ROW_NUMBER() OVER (ORDER BY a.BEGIN_DE DESC, a.PBLANC_ID) AS 순서,
                     a.PBLANC_ID AS 고유번호,
@@ -28,8 +28,8 @@ namespace SeinServices.Api.Data.Chungyak
                     ISNULL(a.HSMP_NM, N'') AS 단지명,
                     CASE
                         WHEN a.BEGIN_DE IS NULL OR a.END_DE IS NULL THEN ISNULL(a.STTUS_NM, N'')
-                        WHEN CAST(GETDATE() AS date) < a.BEGIN_DE THEN N'접수예정'
-                        WHEN CAST(GETDATE() AS date) > a.END_DE THEN N'접수마감'
+                        WHEN {KstTodaySql} < a.BEGIN_DE THEN N'접수예정'
+                        WHEN {KstTodaySql} > a.END_DE THEN N'접수마감'
                         ELSE N'접수중'
                     END AS 상태,
                     a.BEGIN_DE AS 접수시작일,
@@ -44,14 +44,14 @@ namespace SeinServices.Api.Data.Chungyak
                     CASE WHEN s.PBLANC_ID IS NULL THEN CAST(0 AS bit) ELSE CAST(1 AS bit) END AS 즐겨찾기,
                     CASE
                         WHEN a.BEGIN_DE IS NULL OR a.END_DE IS NULL THEN N''
-                        WHEN CAST(GETDATE() AS date) < a.BEGIN_DE
-                            THEN N'D-' + CAST(DATEDIFF(day, CAST(GETDATE() AS date), a.BEGIN_DE) AS nvarchar(10))
-                        WHEN CAST(GETDATE() AS date) > a.END_DE
+                        WHEN {KstTodaySql} < a.BEGIN_DE
+                            THEN N'D-' + CAST(DATEDIFF(day, {KstTodaySql}, a.BEGIN_DE) AS nvarchar(10))
+                        WHEN {KstTodaySql} > a.END_DE
                             THEN N'마감'
                         ELSE
                             CASE
-                                WHEN DATEDIFF(day, CAST(GETDATE() AS date), a.END_DE) <= 7
-                                    THEN N'D-' + CAST(DATEDIFF(day, CAST(GETDATE() AS date), a.END_DE) AS nvarchar(10))
+                                WHEN DATEDIFF(day, {KstTodaySql}, a.END_DE) <= 7
+                                    THEN N'D-' + CAST(DATEDIFF(day, {KstTodaySql}, a.END_DE) AS nvarchar(10))
                                 ELSE N'접수중'
                             END
                     END AS 남은일수
@@ -60,12 +60,12 @@ namespace SeinServices.Api.Data.Chungyak
                 WHERE 1 = 1
                   AND (
                         (
-                            CAST(GETDATE() AS date) < a.BEGIN_DE
-                            AND DATEDIFF(day, CAST(GETDATE() AS date), a.BEGIN_DE) <= 7
+                            {KstTodaySql} < a.BEGIN_DE
+                            AND DATEDIFF(day, {KstTodaySql}, a.BEGIN_DE) <= 7
                         )
                         OR
                         (
-                            CAST(GETDATE() AS date) BETWEEN a.BEGIN_DE AND a.END_DE
+                            {KstTodaySql} BETWEEN a.BEGIN_DE AND a.END_DE
                         )
                   )";
 
@@ -85,11 +85,11 @@ namespace SeinServices.Api.Data.Chungyak
             if (!string.IsNullOrWhiteSpace(status) && status != "전체")
             {
                 if (status == "접수예정")
-                    cmd.CommandText += " AND CAST(GETDATE() AS date) < a.BEGIN_DE";
+                    cmd.CommandText += $" AND {KstTodaySql} < a.BEGIN_DE";
                 else if (status == "접수중")
-                    cmd.CommandText += " AND CAST(GETDATE() AS date) BETWEEN a.BEGIN_DE AND a.END_DE";
+                    cmd.CommandText += $" AND {KstTodaySql} BETWEEN a.BEGIN_DE AND a.END_DE";
                 else if (status == "접수마감")
-                    cmd.CommandText += " AND CAST(GETDATE() AS date) > a.END_DE";
+                    cmd.CommandText += $" AND {KstTodaySql} > a.END_DE";
             }
 
             if (beginFrom.HasValue && beginTo.HasValue)

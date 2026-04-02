@@ -7,6 +7,8 @@ namespace SeinServices.Api.Data.Chungyak
     /// </summary>
     public partial class DBHelper
     {
+        private const string KstTodaySql = "CAST(DATEADD(hour, 9, GETUTCDATE()) AS date)";
+
         private readonly string _connectionString;
 
         public DBHelper(IConfiguration configuration)

@@ -13,10 +13,10 @@
             using var conn = CreateConnection();
             using var cmd = conn.CreateCommand();
 
-            cmd.CommandText = @"
+            cmd.CommandText = $@"
                 UPDATE dbo.TB_RCVHOME
                 SET CLS_YN = 'Y'
-                WHERE END_DE < CAST(GETDATE() AS date)
+                WHERE END_DE < {KstTodaySql}
                   AND (CLS_YN IS NULL OR CLS_YN <> 'Y');
 
                 SELECT @@ROWCOUNT;";
