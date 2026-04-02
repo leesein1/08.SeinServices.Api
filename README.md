@@ -183,12 +183,20 @@ dotnet run
 - 조치: `X-Job-Key` 기반 인증 추가
 - 결과: 승인된 트리거(GitHub Actions)만 배치 엔드포인트 호출 가능
 
+### 10.3 Azure SQL UTC 기준 시간으로 인한 마감 처리 지연
+
+- 문제: GitHub Actions는 한국시간 새벽 3시대에 `close`를 호출했지만, Azure SQL의 `GETDATE()`가 UTC 기준으로 동작해 `END_DE < 오늘` 비교가 한국 날짜와 어긋날 수 있었음
+- 원인: DB 서버 현재 시간은 `GETDATE()`와 `GETUTCDATE()`가 동일하게 반환되어 UTC 기준으로 판단됨
+- 조치: 마감 처리와 조회 상태 계산에서 `CAST(DATEADD(hour, 9, GETUTCDATE()) AS date)`를 공통으로 사용해 KST 날짜 기준으로 비교하도록 수정
+- 결과: 한국시간 기준 날짜 경계(특히 00:00~08:59)에서도 `접수예정 / 접수중 / 접수마감` 및 `close` 배치가 일관되게 동작
+
 ## 11. 운영 체크리스트
 
 - `Schedulers:EnableInProcess=false` 확인
 - `JobTrigger__ApiKey`를 충분히 긴 랜덤 값으로 설정
 - GitHub Actions에서 동일 키를 `X-Job-Key`로 전달
 - 배치 호출 시 warmup -> 대기 -> run-once 순서 준수
+- Azure SQL 시간은 UTC일 수 있으므로, 날짜 비교 SQL은 반드시 KST 보정식(`DATEADD(hour, 9, GETUTCDATE())`) 기준 사용
 - 장애 시 GitHub Actions/App Service/Application Insights 로그 함께 확인
 
 ## 12. GitHub Actions 스케줄 배치
