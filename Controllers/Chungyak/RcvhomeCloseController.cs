@@ -40,6 +40,16 @@ namespace SeinServices.Api.Controllers.Chungyak
             try
             {
                 var result = await _rcvhomeCloseService.RunOnceAsync(cancellationToken);
+
+                if (!result.Success && !result.Skipped)
+                {
+                    return StatusCode(
+                        StatusCodes.Status500InternalServerError,
+                        CreateErrorResponse(
+                            "CLOSE_RUN_FAILED",
+                            result.Message));
+                }
+
                 return Ok(result);
             }
             catch (OperationCanceledException)

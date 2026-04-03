@@ -7,6 +7,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<SeinServices.Api.Data.Chungyak.DBHelper>();
 builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.ChungyakSearchService>();
 builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.ChungyakFavoriteService>();
+builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.ScheduleLogService>();
 builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.IRecruitSyncStore, SeinServices.Api.Services.Chungyak.RecruitSyncStore>();
 builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.ISlackNotifier, SeinServices.Api.Services.Chungyak.SlackNotifier>();
 builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.RecruitSyncService>();

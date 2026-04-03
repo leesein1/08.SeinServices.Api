@@ -9,6 +9,7 @@ namespace SeinServices.Api.Services.Chungyak
     public class RcvhomeCloseService
     {
         private static readonly SemaphoreSlim RunLock = new(1, 1);
+        private const byte CloseJobCode = 2;
 
         private readonly DBHelper _dbHelper;
         private readonly ILogger<RcvhomeCloseService> _logger;
@@ -27,14 +28,29 @@ namespace SeinServices.Api.Services.Chungyak
         public async Task<CloseRunResponseDto> RunOnceAsync(CancellationToken cancellationToken)
         {
             const string actionName = "CloseRcvhome";
+            var startedAtUtc = DateTime.UtcNow;
 
             if (!await RunLock.WaitAsync(0, cancellationToken))
             {
+                var skipMessage = "Close job is already running.";
+                try
+                {
+                    SaveScheduleLog(CloseJobCode, "SKIPPED", startedAtUtc, skipMessage);
+                }
+                catch (Exception logEx)
+                {
+                    return new CloseRunResponseDto
+                    {
+                        Success = false,
+                        Message = $"{skipMessage} Schedule log save failed: {logEx.Message}"
+                    };
+                }
+
                 return new CloseRunResponseDto
                 {
                     Success = false,
                     Skipped = true,
-                    Message = "Close job is already running."
+                    Message = skipMessage
                 };
             }
 
@@ -42,6 +58,7 @@ namespace SeinServices.Api.Services.Chungyak
             {
                 var closedCount = _dbHelper.CloseRcvhome();
                 _dbHelper.SaveAccLog(actionName, "10", $"Closed:{closedCount}");
+                SaveScheduleLog(CloseJobCode, "SUCCESS", startedAtUtc, $"마감 {closedCount}건");
 
                 _logger.LogInformation("Rcvhome close completed. closed={ClosedCount}", closedCount);
                 return new CloseRunResponseDto
@@ -55,6 +72,21 @@ namespace SeinServices.Api.Services.Chungyak
             {
                 _logger.LogError(ex, "Rcvhome close failed.");
                 TrySaveFailLog(actionName, ex.Message);
+
+                try
+                {
+                    SaveScheduleLog(CloseJobCode, "FAIL", startedAtUtc, TruncateNote(ex.Message));
+                }
+                catch (Exception logEx)
+                {
+                    _logger.LogError(logEx, "Failed to write TB_SCH_LOG for close fail case.");
+                    return new CloseRunResponseDto
+                    {
+                        Success = false,
+                        Message = $"{ex.Message} | Schedule log save failed: {logEx.Message}"
+                    };
+                }
+
                 return new CloseRunResponseDto
                 {
                     Success = false,
@@ -78,6 +110,25 @@ namespace SeinServices.Api.Services.Chungyak
                 _logger.LogWarning(ex, "Failed to write close fail log.");
             }
         }
+
+        private void SaveScheduleLog(byte jobCode, string status, DateTime startedAtUtc, string? scheduleNote)
+        {
+            _dbHelper.SaveScheduleLog(
+                jobCode,
+                status,
+                startedAtUtc,
+                DateTime.UtcNow,
+                TruncateNote(scheduleNote));
+        }
+
+        private static string? TruncateNote(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return text;
+            }
+
+            return text.Length <= 200 ? text : text[..200];
+        }
     }
 }
-
