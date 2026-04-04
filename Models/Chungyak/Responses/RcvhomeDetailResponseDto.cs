@@ -36,5 +36,7 @@
         public bool IsFavorite { get; set; }
 
         public DateTime? AnnouncementDate { get; set; }
+
+        public DateTime? PRZWNER_PRESNATN_DE { get; set; }
     }
 }

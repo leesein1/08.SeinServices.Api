@@ -55,7 +55,8 @@ namespace SeinServices.Api.Data.Chungyak
                                 ELSE N'접수중'
                             END
                     END AS 남은일수,
-                    a.RCRIT_PBLANC_DE AS 공고일
+                    a.RCRIT_PBLANC_DE AS 공고일,
+                    a.PRZWNER_PRESNATN_DE AS PRZWNER_PRESNATN_DE
                 FROM dbo.TB_RCVHOME a
                 LEFT JOIN dbo.TB_SUBSCRIBE s ON s.PBLANC_ID = a.PBLANC_ID
                 WHERE 1 = 1
@@ -127,7 +128,8 @@ namespace SeinServices.Api.Data.Chungyak
                     남은일수 = rd["남은일수"]?.ToString() ?? string.Empty,
                     URL = rd["URL"]?.ToString() ?? string.Empty,
                     즐겨찾기 = rd["즐겨찾기"] != DBNull.Value && (bool)rd["즐겨찾기"],
-                    공고일 = rd["공고일"] == DBNull.Value ? null : (DateTime?)rd["공고일"]
+                    공고일 = rd["공고일"] == DBNull.Value ? null : (DateTime?)rd["공고일"],
+                    PRZWNER_PRESNATN_DE = rd["PRZWNER_PRESNATN_DE"] == DBNull.Value ? null : (DateTime?)rd["PRZWNER_PRESNATN_DE"]
                 });
             }
 

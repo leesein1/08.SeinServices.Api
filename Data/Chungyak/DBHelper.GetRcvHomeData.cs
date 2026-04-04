@@ -58,7 +58,8 @@ namespace SeinServices.Api.Data.Chungyak
                         THEN CAST(1 AS bit)
                         ELSE CAST(0 AS bit)
                     END AS 즐겨찾기,
-                    a.RCRIT_PBLANC_DE AS 공고일
+                    a.RCRIT_PBLANC_DE AS 공고일,
+                    a.PRZWNER_PRESNATN_DE AS PRZWNER_PRESNATN_DE
                 FROM dbo.TB_RCVHOME AS a
                 WHERE 1 = 1
             ");

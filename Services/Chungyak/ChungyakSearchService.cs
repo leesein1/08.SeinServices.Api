@@ -114,7 +114,8 @@ namespace SeinServices.Api.Services.Chungyak
                     남은일수 = row.Field<string>("남은일수") ?? string.Empty,
                     URL = row.Field<string>("URL") ?? string.Empty,
                     즐겨찾기 = row.Field<bool?>("즐겨찾기") ?? false,
-                    공고일 = row.Field<DateTime?>("공고일")
+                    공고일 = row.Field<DateTime?>("공고일"),
+                    PRZWNER_PRESNATN_DE = row.Field<DateTime?>("PRZWNER_PRESNATN_DE")
                 });
             }
 

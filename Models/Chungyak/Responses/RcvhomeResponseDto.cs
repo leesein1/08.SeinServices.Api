@@ -21,6 +21,7 @@ namespace SeinServices.Api.Models.Chungyak.Responses
         public string URL { get; set; } = string.Empty;
         public bool 즐겨찾기 { get; set; }
         public DateTime? 공고일 { get; set; }
+        public DateTime? PRZWNER_PRESNATN_DE { get; set; }
     }
 }
 
