@@ -54,9 +54,9 @@ namespace SeinServices.Api.Data.Chungyak
                     }
                 }
 
-                const string insertSql = @"
+                var insertSql = $@"
                     INSERT INTO dbo.TB_SUBSCRIBE (PBLANC_ID, ALERT_DATE, CREATE_TIME, BRTC_NM, SIGNGU_NM)
-                    VALUES (@PBLANC_ID, GETDATE(), GETDATE(), @BRTC_NM, @SIGNGU_NM);";
+                    VALUES (@PBLANC_ID, {KstNowSql}, {KstNowSql}, @BRTC_NM, @SIGNGU_NM);";
                 using var insertCmd = new SqlCommand(insertSql, conn);
                 insertCmd.Parameters.AddWithValue("@PBLANC_ID", pblancId);
                 insertCmd.Parameters.AddWithValue("@BRTC_NM", brtcNm);

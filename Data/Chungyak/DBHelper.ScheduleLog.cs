@@ -13,14 +13,17 @@ namespace SeinServices.Api.Data.Chungyak
         public void SaveScheduleLog(
             byte jobCode,
             string status,
-            DateTime startedAtUtc,
-            DateTime? endedAtUtc,
+            DateTime startedAt,
+            DateTime? endedAt,
             string? scheduleNote = null)
         {
             if (jobCode is not 1 and not 2)
             {
                 throw new ArgumentOutOfRangeException(nameof(jobCode), "jobCode must be 1(sync) or 2(close).");
             }
+
+            var startedAtKst = ToKst(startedAt);
+            DateTime? endedAtKst = endedAt.HasValue ? ToKst(endedAt.Value) : null;
 
             if (string.IsNullOrWhiteSpace(status))
             {
@@ -50,8 +53,8 @@ namespace SeinServices.Api.Data.Chungyak
 
             cmd.Parameters.AddWithValue("@JOB_CODE", jobCode);
             cmd.Parameters.AddWithValue("@STATUS", status.Trim().ToUpperInvariant());
-            cmd.Parameters.AddWithValue("@STARTED_AT", startedAtUtc);
-            cmd.Parameters.AddWithValue("@ENDED_AT", (object?)endedAtUtc ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@STARTED_AT", startedAtKst);
+            cmd.Parameters.AddWithValue("@ENDED_AT", (object?)endedAtKst ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@SCHEDULE_NOTE", (object?)scheduleNote ?? DBNull.Value);
 
             conn.Open();

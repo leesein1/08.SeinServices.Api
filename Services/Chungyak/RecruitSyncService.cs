@@ -46,14 +46,14 @@ namespace SeinServices.Api.Services.Chungyak
         public async Task<SyncRunResponseDto> RunOnceAsync(CancellationToken cancellationToken)
         {
             const string actionName = "SyncRecruitListToDbAsync";
-            var startedAtUtc = DateTime.UtcNow;
+            var startedAt = DateTime.UtcNow;
 
             if (!await RunLock.WaitAsync(0, cancellationToken))
             {
                 var skipMessage = "Sync job is already running.";
                 try
                 {
-                    SaveScheduleLog(SyncJobCode, "SKIPPED", startedAtUtc, skipMessage);
+                    SaveScheduleLog(SyncJobCode, "SKIPPED", startedAt, skipMessage);
                 }
                 catch (Exception logEx)
                 {
@@ -83,7 +83,7 @@ namespace SeinServices.Api.Services.Chungyak
                 {
                     _logger.LogWarning("MyHomeApi settings are missing. Skip sync job.");
                     TrySaveAccLog(actionName, "00", "MyHomeApi settings are missing.");
-                    SaveScheduleLog(SyncJobCode, "FAIL", startedAtUtc, "MyHomeApi settings are missing.");
+                    SaveScheduleLog(SyncJobCode, "FAIL", startedAt, "MyHomeApi settings are missing.");
                     return new SyncRunResponseDto
                     {
                         Success = false,
@@ -112,7 +112,7 @@ namespace SeinServices.Api.Services.Chungyak
                 {
                     _logger.LogWarning("MyHome API response is invalid.");
                     TrySaveAccLog(actionName, "00", "Invalid API response.");
-                    SaveScheduleLog(SyncJobCode, "FAIL", startedAtUtc, "Invalid API response.");
+                    SaveScheduleLog(SyncJobCode, "FAIL", startedAt, "Invalid API response.");
                     return new SyncRunResponseDto
                     {
                         Success = false,
@@ -124,7 +124,7 @@ namespace SeinServices.Api.Services.Chungyak
                 {
                     _logger.LogInformation("MyHome API returned no data.");
                     TrySaveAccLog(actionName, "10", "No data.");
-                    SaveScheduleLog(SyncJobCode, "SUCCESS", startedAtUtc, "No data.");
+                    SaveScheduleLog(SyncJobCode, "SUCCESS", startedAt, "No data.");
                     return new SyncRunResponseDto
                     {
                         Success = true,
@@ -138,7 +138,7 @@ namespace SeinServices.Api.Services.Chungyak
                     var apiError = $"API error: {header.resultCode}/{header.resultMsg}";
                     _logger.LogWarning(apiError);
                     TrySaveAccLog(actionName, "00", apiError);
-                    SaveScheduleLog(SyncJobCode, "FAIL", startedAtUtc, TruncateNote(apiError));
+                    SaveScheduleLog(SyncJobCode, "FAIL", startedAt, TruncateNote(apiError));
                     return new SyncRunResponseDto
                     {
                         Success = false,
@@ -196,7 +196,7 @@ namespace SeinServices.Api.Services.Chungyak
                 SaveScheduleLog(
                     SyncJobCode,
                     "SUCCESS",
-                    startedAtUtc,
+                    startedAt,
                     $"신규 {insertCount}건, 변경 {updateCount}건, 유지 {noneCount}건, 오류 {errorCount}건");
 
                 return new SyncRunResponseDto
@@ -213,7 +213,7 @@ namespace SeinServices.Api.Services.Chungyak
             catch (OperationCanceledException)
             {
                 _logger.LogInformation("Recruit sync cancelled.");
-                SaveScheduleLog(SyncJobCode, "FAIL", startedAtUtc, "Sync cancelled.");
+                SaveScheduleLog(SyncJobCode, "FAIL", startedAt, "Sync cancelled.");
                 throw;
             }
             catch (Exception ex)
@@ -223,7 +223,7 @@ namespace SeinServices.Api.Services.Chungyak
 
                 try
                 {
-                    SaveScheduleLog(SyncJobCode, "FAIL", startedAtUtc, TruncateNote(ex.Message));
+                    SaveScheduleLog(SyncJobCode, "FAIL", startedAt, TruncateNote(ex.Message));
                 }
                 catch (Exception logEx)
                 {
@@ -259,12 +259,12 @@ namespace SeinServices.Api.Services.Chungyak
             }
         }
 
-        private void SaveScheduleLog(byte jobCode, string status, DateTime startedAtUtc, string? scheduleNote)
+        private void SaveScheduleLog(byte jobCode, string status, DateTime startedAt, string? scheduleNote)
         {
             _dbHelper.SaveScheduleLog(
                 jobCode,
                 status,
-                startedAtUtc,
+                startedAt,
                 DateTime.UtcNow,
                 TruncateNote(scheduleNote));
         }

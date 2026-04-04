@@ -8,6 +8,8 @@ namespace SeinServices.Api.Data.Chungyak
     public partial class DBHelper
     {
         private const string KstTodaySql = "CAST(DATEADD(hour, 9, GETUTCDATE()) AS date)";
+        private const string KstNowSql = "DATEADD(hour, 9, GETUTCDATE())";
+        private static readonly TimeZoneInfo KoreaTimeZone = ResolveKoreaTimeZone();
 
         private readonly string _connectionString;
 
@@ -20,6 +22,41 @@ namespace SeinServices.Api.Data.Chungyak
         private SqlConnection CreateConnection()
         {
             return new SqlConnection(_connectionString);
+        }
+
+        private static DateTime ToKst(DateTime value)
+        {
+            var utc = value.Kind switch
+            {
+                DateTimeKind.Utc => value,
+                DateTimeKind.Local => value.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+            };
+
+            return TimeZoneInfo.ConvertTimeFromUtc(utc, KoreaTimeZone);
+        }
+
+        private static TimeZoneInfo ResolveKoreaTimeZone()
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById("Korea Standard Time");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                try
+                {
+                    return TimeZoneInfo.FindSystemTimeZoneById("Asia/Seoul");
+                }
+                catch
+                {
+                    return TimeZoneInfo.Local;
+                }
+            }
+            catch (InvalidTimeZoneException)
+            {
+                return TimeZoneInfo.Local;
+            }
         }
     }
 }

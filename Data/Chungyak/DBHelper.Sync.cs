@@ -31,7 +31,7 @@ namespace SeinServices.Api.Data.Chungyak
 
             using var cmd = conn.CreateCommand();
             cmd.CommandType = CommandType.Text;
-            cmd.CommandText = @"
+            cmd.CommandText = $@"
                 DECLARE @MergeActions TABLE (Action NVARCHAR(10));
 
                 MERGE TB_RCVHOME AS T
@@ -120,7 +120,7 @@ namespace SeinServices.Api.Data.Chungyak
                         T.SURLUS               = S.SURLUS,
                         T.BEGIN_DE             = S.BEGIN_DE,
                         T.END_DE               = S.END_DE,
-                        T.UPDATED_AT           = GETDATE()
+                        T.UPDATED_AT           = {KstNowSql}
 
                 WHEN NOT MATCHED THEN
                     INSERT (
@@ -133,7 +133,7 @@ namespace SeinServices.Api.Data.Chungyak
                         S.PBLANC_ID, S.HOUSE_SN, S.STTUS_NM, S.PBLANC_NM, S.SUPLY_INSTT_NM, S.HOUSE_TY_NM, S.BEFORE_PBLANC_ID,
                         S.RCRIT_PBLANC_DE, S.PRZWNER_PRESNATN_DE, S.REFRNC, S.URL, S.PC_URL, S.MOBILE_URL, S.HSMP_NM, S.BRTC_NM, S.SIGNGU_NM,
                         S.FULL_ADRES, S.RN_CODE_NM, S.REFRN_LEGALDONG_NM, S.PNU, S.HEAT_MTHD_NM, S.SUM_SUPLY_CO, S.ENTY, S.PRTPAY, S.SURLUS,
-                        S.BEGIN_DE, S.END_DE, GETDATE(), GETDATE(), 'N'
+                        S.BEGIN_DE, S.END_DE, {KstNowSql}, {KstNowSql}, 'N'
                     )
                 OUTPUT $action INTO @MergeActions(Action);
 
@@ -199,7 +199,7 @@ namespace SeinServices.Api.Data.Chungyak
             using var conn = CreateConnection();
             using var cmd = conn.CreateCommand();
 
-            cmd.CommandText = @"
+            cmd.CommandText = $@"
                 INSERT INTO dbo.TB_RCVHOME_HIST
                 (
                     PBLANC_ID,
@@ -211,7 +211,7 @@ namespace SeinServices.Api.Data.Chungyak
                     @PBLANC_ID,
                     ISNULL(MAX(HIST_ID), 0) + 1,
                     @CHANGE_TYPE,
-                    SYSDATETIME()
+                    {KstNowSql}
                 FROM dbo.TB_RCVHOME_HIST
                 WHERE PBLANC_ID = @PBLANC_ID;";
 
@@ -239,7 +239,7 @@ namespace SeinServices.Api.Data.Chungyak
 
             using var conn = CreateConnection();
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
+            cmd.CommandText = $@"
                 INSERT INTO TB_ACC_LOG (
                     ACTION_NM,
                     ACTION_DESC,
@@ -250,7 +250,7 @@ namespace SeinServices.Api.Data.Chungyak
                     @ACTION_NM,
                     @ACTION_DESC,
                     @RESULT_CD,
-                    GETDATE()
+                    {KstNowSql}
                 );";
 
             cmd.Parameters.AddWithValue("@ACTION_NM", actionName);

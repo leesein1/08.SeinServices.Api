@@ -190,6 +190,16 @@ dotnet run
 - 조치: 마감 처리와 조회 상태 계산에서 `CAST(DATEADD(hour, 9, GETUTCDATE()) AS date)`를 공통으로 사용해 KST 날짜 기준으로 비교하도록 수정
 - 결과: 한국시간 기준 날짜 경계(특히 00:00~08:59)에서도 `접수예정 / 접수중 / 접수마감` 및 `close` 배치가 일관되게 동작
 
+### 10.4 DB 로그 시각이 KST 대비 -9시간으로 저장되는 문제
+
+- 문제: `TB_SCH_LOG` 및 일부 이력/접근 로그의 시각이 UTC 기준으로 저장되어 운영 화면에서 KST 대비 `-9시간`으로 보임
+- 원인: C# `DateTime.UtcNow`와 SQL `GETDATE()/SYSDATETIME()` 혼용으로 로그 저장 기준이 환경 시간대(UTC)에 종속됨
+- 조치: 로그/이력 시각 저장을 KST 기준으로 통일
+- 상세:
+- `TB_SCH_LOG` 저장 시각(`STARTED_AT/ENDED_AT`)은 저장 직전에 KST로 변환
+- `TB_ACC_LOG`, `TB_RCVHOME_HIST`, `TB_SUBSCRIBE`, `TB_RCVHOME.CREATED_AT/UPDATED_AT` 저장식은 `DATEADD(hour, 9, GETUTCDATE())` 사용
+- 결과: 신규로 쌓이는 로그/이력 시각이 한국시간 기준으로 일관되게 기록됨
+
 ## 11. 운영 체크리스트
 
 - `Schedulers:EnableInProcess=false` 확인

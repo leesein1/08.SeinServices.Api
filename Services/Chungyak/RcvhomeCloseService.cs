@@ -28,14 +28,14 @@ namespace SeinServices.Api.Services.Chungyak
         public async Task<CloseRunResponseDto> RunOnceAsync(CancellationToken cancellationToken)
         {
             const string actionName = "CloseRcvhome";
-            var startedAtUtc = DateTime.UtcNow;
+            var startedAt = DateTime.UtcNow;
 
             if (!await RunLock.WaitAsync(0, cancellationToken))
             {
                 var skipMessage = "Close job is already running.";
                 try
                 {
-                    SaveScheduleLog(CloseJobCode, "SKIPPED", startedAtUtc, skipMessage);
+                    SaveScheduleLog(CloseJobCode, "SKIPPED", startedAt, skipMessage);
                 }
                 catch (Exception logEx)
                 {
@@ -58,7 +58,7 @@ namespace SeinServices.Api.Services.Chungyak
             {
                 var closedCount = _dbHelper.CloseRcvhome();
                 _dbHelper.SaveAccLog(actionName, "10", $"Closed:{closedCount}");
-                SaveScheduleLog(CloseJobCode, "SUCCESS", startedAtUtc, $"마감 {closedCount}건");
+                SaveScheduleLog(CloseJobCode, "SUCCESS", startedAt, $"마감 {closedCount}건");
 
                 _logger.LogInformation("Rcvhome close completed. closed={ClosedCount}", closedCount);
                 return new CloseRunResponseDto
@@ -75,7 +75,7 @@ namespace SeinServices.Api.Services.Chungyak
 
                 try
                 {
-                    SaveScheduleLog(CloseJobCode, "FAIL", startedAtUtc, TruncateNote(ex.Message));
+                    SaveScheduleLog(CloseJobCode, "FAIL", startedAt, TruncateNote(ex.Message));
                 }
                 catch (Exception logEx)
                 {
@@ -111,12 +111,12 @@ namespace SeinServices.Api.Services.Chungyak
             }
         }
 
-        private void SaveScheduleLog(byte jobCode, string status, DateTime startedAtUtc, string? scheduleNote)
+        private void SaveScheduleLog(byte jobCode, string status, DateTime startedAt, string? scheduleNote)
         {
             _dbHelper.SaveScheduleLog(
                 jobCode,
                 status,
-                startedAtUtc,
+                startedAt,
                 DateTime.UtcNow,
                 TruncateNote(scheduleNote));
         }
