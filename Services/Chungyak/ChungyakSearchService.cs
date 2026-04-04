@@ -113,7 +113,8 @@ namespace SeinServices.Api.Services.Chungyak
                     공급유형 = row.Field<string>("공급유형") ?? string.Empty,
                     남은일수 = row.Field<string>("남은일수") ?? string.Empty,
                     URL = row.Field<string>("URL") ?? string.Empty,
-                    즐겨찾기 = row.Field<bool?>("즐겨찾기") ?? false
+                    즐겨찾기 = row.Field<bool?>("즐겨찾기") ?? false,
+                    공고일 = row.Field<DateTime?>("공고일")
                 });
             }
 

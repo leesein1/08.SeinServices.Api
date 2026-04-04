@@ -58,7 +58,8 @@ namespace SeinServices.Api.Data.Chungyak
                         )
                         THEN CAST(1 AS bit)
                         ELSE CAST(0 AS bit)
-                    END AS IsFavorite
+                    END AS IsFavorite,
+                    a.RCRIT_PBLANC_DE AS AnnouncementDate
                 FROM dbo.TB_RCVHOME AS a
                 WHERE a.PBLANC_ID = @pblancId;";
 
@@ -88,7 +89,8 @@ namespace SeinServices.Api.Data.Chungyak
                 HouseTypeName = reader["HouseTypeName"]?.ToString() ?? string.Empty,
                 DdayText = reader["DdayText"]?.ToString() ?? string.Empty,
                 Url = reader["Url"]?.ToString() ?? string.Empty,
-                IsFavorite = reader["IsFavorite"] != DBNull.Value && (bool)reader["IsFavorite"]
+                IsFavorite = reader["IsFavorite"] != DBNull.Value && (bool)reader["IsFavorite"],
+                AnnouncementDate = reader["AnnouncementDate"] == DBNull.Value ? null : (DateTime?)reader["AnnouncementDate"]
             };
         }
     }

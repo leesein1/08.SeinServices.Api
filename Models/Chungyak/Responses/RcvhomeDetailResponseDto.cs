@@ -34,5 +34,7 @@
         public string Url { get; set; } = string.Empty;
 
         public bool IsFavorite { get; set; }
+
+        public DateTime? AnnouncementDate { get; set; }
     }
 }

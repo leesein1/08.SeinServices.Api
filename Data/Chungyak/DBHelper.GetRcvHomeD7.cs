@@ -54,7 +54,8 @@ namespace SeinServices.Api.Data.Chungyak
                                     THEN N'D-' + CAST(DATEDIFF(day, {KstTodaySql}, a.END_DE) AS nvarchar(10))
                                 ELSE N'접수중'
                             END
-                    END AS 남은일수
+                    END AS 남은일수,
+                    a.RCRIT_PBLANC_DE AS 공고일
                 FROM dbo.TB_RCVHOME a
                 LEFT JOIN dbo.TB_SUBSCRIBE s ON s.PBLANC_ID = a.PBLANC_ID
                 WHERE 1 = 1
@@ -125,7 +126,8 @@ namespace SeinServices.Api.Data.Chungyak
                     공급유형 = rd["공급유형"]?.ToString() ?? string.Empty,
                     남은일수 = rd["남은일수"]?.ToString() ?? string.Empty,
                     URL = rd["URL"]?.ToString() ?? string.Empty,
-                    즐겨찾기 = rd["즐겨찾기"] != DBNull.Value && (bool)rd["즐겨찾기"]
+                    즐겨찾기 = rd["즐겨찾기"] != DBNull.Value && (bool)rd["즐겨찾기"],
+                    공고일 = rd["공고일"] == DBNull.Value ? null : (DateTime?)rd["공고일"]
                 });
             }
 

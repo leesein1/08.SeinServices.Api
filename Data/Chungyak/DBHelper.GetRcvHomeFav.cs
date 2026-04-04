@@ -46,7 +46,8 @@ namespace SeinServices.Api.Data.Chungyak
                         ELSE N'접수중'
                     END AS 남은일수,
                     a.PC_URL AS URL,
-                    CAST(1 AS bit) AS 즐겨찾기
+                    CAST(1 AS bit) AS 즐겨찾기,
+                    a.RCRIT_PBLANC_DE AS 공고일
                 FROM dbo.TB_SUBSCRIBE b
                 LEFT JOIN dbo.TB_RCVHOME a ON b.PBLANC_ID = a.PBLANC_ID
                 WHERE 1 = 1
