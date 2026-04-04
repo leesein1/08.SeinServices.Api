@@ -27,23 +27,24 @@ namespace SeinServices.Api.Controllers.Chungyak
         /// <summary>
         /// GetLast 작업을 수행합니다.
         /// </summary>
-        public ActionResult<ScheduleLastResponseDto> GetLast([FromQuery] int jobType)
+        public ActionResult<ScheduleLastResponseDto> GetLast([FromQuery] byte jobCode = 1)
         {
-            if (!_scheduleLogService.TryMapJobTypeToCode(jobType, out _))
+            if (!_scheduleLogService.TryMapJobCodeToType(jobCode, out _))
             {
                 return BadRequest(CreateErrorResponse(
-                    "INVALID_JOB_TYPE",
-                    "jobType must be 1(main sync) or 0(close)."));
+                    "INVALID_JOB_CODE",
+                    "jobCode must be 1(sync) or 2(close)."));
             }
 
             try
             {
-                var response = _scheduleLogService.GetLastScheduleLog(jobType);
+                var response = _scheduleLogService.GetLastScheduleLogByJobCode(jobCode);
+
                 if (response is null)
                 {
                     return NotFound(CreateErrorResponse(
                         "SCHEDULE_LOG_NOT_FOUND",
-                        "No schedule log found for the requested job type."));
+                        "No schedule log found for the requested job code."));
                 }
 
                 return Ok(response);
