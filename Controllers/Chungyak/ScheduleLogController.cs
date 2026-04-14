@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SeinServices.Api.Models.Chungyak.Requests;
 using SeinServices.Api.Models.Chungyak.Responses;
 using SeinServices.Api.Models.Common;
 using SeinServices.Api.Services.Chungyak;
@@ -17,6 +18,48 @@ namespace SeinServices.Api.Controllers.Chungyak
         public ScheduleLogController(ScheduleLogService scheduleLogService)
         {
             _scheduleLogService = scheduleLogService;
+        }
+
+        [HttpGet]
+        [ProducesResponseType(typeof(List<ScheduleLogResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status500InternalServerError)]
+        public ActionResult<List<ScheduleLogResponseDto>> GetScheduleLogs([FromQuery] ScheduleLogSearchRequestDto request)
+        {
+            if (!_scheduleLogService.IsValidDateRange(request.StartedFrom, request.StartedTo))
+            {
+                return BadRequest(CreateErrorResponse(
+                    "INVALID_DATE_RANGE",
+                    "StartedFrom must be less than or equal to StartedTo."));
+            }
+
+            if (!_scheduleLogService.IsValidStatusFilter(request.Status))
+            {
+                return BadRequest(CreateErrorResponse(
+                    "INVALID_STATUS",
+                    "Status must be one of: SUCCESS, FAILED."));
+            }
+
+            if (!_scheduleLogService.TryMapJobCode(request.JobCode, out _))
+            {
+                return BadRequest(CreateErrorResponse(
+                    "INVALID_JOB_CODE",
+                    "JobCode must be one of: SYNC, CLOSE."));
+            }
+
+            try
+            {
+                var response = _scheduleLogService.GetScheduleLogs(request);
+                return Ok(response);
+            }
+            catch
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    CreateErrorResponse(
+                        "SCHEDULE_LOG_QUERY_FAILED",
+                        "An unexpected error occurred while retrieving schedule logs."));
+            }
         }
 
         [HttpGet("last")]
