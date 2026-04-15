@@ -73,21 +73,37 @@ namespace SeinServices.Api.Data.Chungyak
                 }
 
                 var insertAlarmSql = $@"
-                    ;WITH Candidate AS (
+                    ;WITH Base AS (
+                        SELECT
+                            COALESCE(
+                                TRY_CONVERT(date, r.BEGIN_DE),
+                                TRY_CONVERT(date, NULLIF(CONVERT(nvarchar(20), r.BEGIN_DE), ''), 112)
+                            ) AS BEGIN_DATE,
+                            COALESCE(
+                                TRY_CONVERT(date, r.END_DE),
+                                TRY_CONVERT(date, NULLIF(CONVERT(nvarchar(20), r.END_DE), ''), 112)
+                            ) AS END_DATE,
+                            COALESCE(
+                                TRY_CONVERT(date, r.PRZWNER_PRESNATN_DE),
+                                TRY_CONVERT(date, NULLIF(CONVERT(nvarchar(20), r.PRZWNER_PRESNATN_DE), ''), 112)
+                            ) AS WINNER_DATE
+                        FROM dbo.TB_RCVHOME r
+                        WHERE r.PBLANC_ID = @PBLANC_ID
+                    ),
+                    Candidate AS (
                         SELECT
                             v.ALARM_TYPE,
                             CAST(v.TARGET_DATE AS date) AS TARGET_DATE,
                             v.SORT_ORDER
-                        FROM dbo.TB_RCVHOME r
+                        FROM Base b
                         CROSS APPLY (VALUES
-                            (N'RECRUIT_BEGIN_D1', DATEADD(day, -1, r.BEGIN_DE), 1),
-                            (N'RECRUIT_BEGIN_DDAY', r.BEGIN_DE, 2),
-                            (N'RECRUIT_END_D1', DATEADD(day, -1, r.END_DE), 3),
-                            (N'RECRUIT_END_DDAY', r.END_DE, 4),
-                            (N'WINNER_ANNOUNCE', r.PRZWNER_PRESNATN_DE, 5)
+                            (N'RECRUIT_BEGIN_D1', DATEADD(day, -1, b.BEGIN_DATE), 1),
+                            (N'RECRUIT_BEGIN_DDAY', b.BEGIN_DATE, 2),
+                            (N'RECRUIT_END_D1', DATEADD(day, -1, b.END_DATE), 3),
+                            (N'RECRUIT_END_DDAY', b.END_DATE, 4),
+                            (N'WINNER_ANNOUNCE', b.WINNER_DATE, 5)
                         ) v(ALARM_TYPE, TARGET_DATE, SORT_ORDER)
-                        WHERE r.PBLANC_ID = @PBLANC_ID
-                          AND v.TARGET_DATE IS NOT NULL
+                        WHERE v.TARGET_DATE IS NOT NULL
                           AND CAST(v.TARGET_DATE AS date) >= {KstTodaySql}
                     ),
                     Dedup AS (
@@ -126,7 +142,7 @@ namespace SeinServices.Api.Data.Chungyak
                         END,
                         CONCAT(N'PBLANC_ID: ', @PBLANC_ID, N', 알림일: ', CONVERT(nvarchar(10), d.TARGET_DATE, 23)),
                         {KstNowSql},
-                        NULL,
+                        DATEADD(hour, 9, CAST(d.TARGET_DATE AS datetime)),
                         N'READY',
                         0,
                         NULL
