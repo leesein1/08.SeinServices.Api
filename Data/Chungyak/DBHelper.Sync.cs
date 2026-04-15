@@ -260,6 +260,95 @@ namespace SeinServices.Api.Data.Chungyak
             conn.Open();
             cmd.ExecuteNonQuery();
         }
+
+        /// <summary>
+        /// SaveAlarmLog 작업을 수행합니다.
+        /// </summary>
+        public void SaveAlarmLog(
+            string alarmSource,
+            int? subscribeIdx,
+            string pblancId,
+            string alarmType,
+            DateTime? targetDate,
+            string sendStatus,
+            string? alarmTitle,
+            string? alarmMessage,
+            string? errorMessage = null)
+        {
+            if (string.IsNullOrWhiteSpace(alarmSource))
+            {
+                throw new ArgumentNullException(nameof(alarmSource));
+            }
+
+            if (string.IsNullOrWhiteSpace(pblancId))
+            {
+                throw new ArgumentNullException(nameof(pblancId));
+            }
+
+            if (string.IsNullOrWhiteSpace(alarmType))
+            {
+                throw new ArgumentNullException(nameof(alarmType));
+            }
+
+            if (string.IsNullOrWhiteSpace(sendStatus))
+            {
+                throw new ArgumentNullException(nameof(sendStatus));
+            }
+
+            using var conn = CreateConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $@"
+                INSERT INTO dbo.TB_ALARM_LOG (
+                    ALARM_SOURCE,
+                    SUBSCRIBE_IDX,
+                    PBLANC_ID,
+                    ALARM_TYPE,
+                    TARGET_DATE,
+                    SEND_STATUS,
+                    SEND_TIME,
+                    ALARM_TITLE,
+                    ALARM_MESSAGE,
+                    ERROR_MESSAGE,
+                    CREATE_TIME
+                )
+                VALUES (
+                    @ALARM_SOURCE,
+                    @SUBSCRIBE_IDX,
+                    @PBLANC_ID,
+                    @ALARM_TYPE,
+                    @TARGET_DATE,
+                    @SEND_STATUS,
+                    {KstNowSql},
+                    @ALARM_TITLE,
+                    @ALARM_MESSAGE,
+                    @ERROR_MESSAGE,
+                    {KstNowSql}
+                );";
+
+            cmd.Parameters.Add("@ALARM_SOURCE", SqlDbType.NVarChar, 30).Value = TrimToMax(alarmSource, 30);
+            cmd.Parameters.Add("@SUBSCRIBE_IDX", SqlDbType.Int).Value = (object?)subscribeIdx ?? DBNull.Value;
+            cmd.Parameters.Add("@PBLANC_ID", SqlDbType.NVarChar, 20).Value = TrimToMax(pblancId, 20);
+            cmd.Parameters.Add("@ALARM_TYPE", SqlDbType.NVarChar, 30).Value = TrimToMax(alarmType, 30);
+            cmd.Parameters.Add("@TARGET_DATE", SqlDbType.Date).Value = (object?)targetDate ?? DBNull.Value;
+            cmd.Parameters.Add("@SEND_STATUS", SqlDbType.NVarChar, 20).Value = TrimToMax(sendStatus, 20);
+            cmd.Parameters.Add("@ALARM_TITLE", SqlDbType.NVarChar, 200).Value = (object?)TrimToMax(alarmTitle, 200) ?? DBNull.Value;
+            cmd.Parameters.Add("@ALARM_MESSAGE", SqlDbType.NVarChar, 1000).Value = (object?)TrimToMax(alarmMessage, 1000) ?? DBNull.Value;
+            cmd.Parameters.Add("@ERROR_MESSAGE", SqlDbType.NVarChar, 2000).Value = (object?)TrimToMax(errorMessage, 2000) ?? DBNull.Value;
+
+            conn.Open();
+            cmd.ExecuteNonQuery();
+        }
+
+        private static string? TrimToMax(string? value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var trimmed = value.Trim();
+            return trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
+        }
     }
 }
 

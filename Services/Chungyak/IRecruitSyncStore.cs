@@ -12,6 +12,17 @@ namespace SeinServices.Api.Services.Chungyak
         bool SaveRcvhomeHist(string pblancId, string changeType);
 
         void SaveAccLog(string actionName, string resultCode, string? actionDesc = null);
+
+        void SaveAlarmLog(
+            string alarmSource,
+            int? subscribeIdx,
+            string pblancId,
+            string alarmType,
+            DateTime? targetDate,
+            string sendStatus,
+            string? alarmTitle,
+            string? alarmMessage,
+            string? errorMessage = null);
     }
 }
 

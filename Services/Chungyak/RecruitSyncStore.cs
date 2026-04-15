@@ -35,6 +35,32 @@ namespace SeinServices.Api.Services.Chungyak
         {
             _dbHelper.SaveAccLog(actionName, resultCode, actionDesc);
         }
+
+        /// <summary>
+        /// SaveAlarmLog 작업을 수행합니다.
+        /// </summary>
+        public void SaveAlarmLog(
+            string alarmSource,
+            int? subscribeIdx,
+            string pblancId,
+            string alarmType,
+            DateTime? targetDate,
+            string sendStatus,
+            string? alarmTitle,
+            string? alarmMessage,
+            string? errorMessage = null)
+        {
+            _dbHelper.SaveAlarmLog(
+                alarmSource,
+                subscribeIdx,
+                pblancId,
+                alarmType,
+                targetDate,
+                sendStatus,
+                alarmTitle,
+                alarmMessage,
+                errorMessage);
+        }
     }
 }
 

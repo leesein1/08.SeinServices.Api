@@ -16,6 +16,7 @@ namespace SeinServices.Api.Services.Chungyak
     {
         private static readonly SemaphoreSlim RunLock = new(1, 1);
         private const byte SyncJobCode = 1;
+        private const string AlarmSource = "CHUNGYAK_SYNC";
 
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
@@ -165,12 +166,12 @@ namespace SeinServices.Api.Services.Chungyak
                             case RcvhomeSaveResult.Inserted:
                                 insertCount++;
                                 _store.SaveRcvhomeHist(entity.PblancId, "I");
-                                await _slackNotifier.SendAsync(BuildSlackMessage(item, true), cancellationToken);
+                                await SendSlackAndSaveAlarmLogAsync(item, isInsert: true, cancellationToken);
                                 break;
                             case RcvhomeSaveResult.Updated:
                                 updateCount++;
                                 _store.SaveRcvhomeHist(entity.PblancId, "U");
-                                await _slackNotifier.SendAsync(BuildSlackMessage(item, false), cancellationToken);
+                                await SendSlackAndSaveAlarmLogAsync(item, isInsert: false, cancellationToken);
                                 break;
                             default:
                                 noneCount++;
@@ -279,9 +280,37 @@ namespace SeinServices.Api.Services.Chungyak
             return text.Length <= 200 ? text : text[..200];
         }
 
-        private static string BuildSlackMessage(MyHomeRecruitItem item, bool isInsert)
+        private async Task SendSlackAndSaveAlarmLogAsync(
+            MyHomeRecruitItem item,
+            bool isInsert,
+            CancellationToken cancellationToken)
         {
-            var title = isInsert ? "[신규 모집공고 등록]" : "[모집공고 변경]";
+            var alarmType = isInsert ? "RECRUIT_INSERT" : "RECRUIT_UPDATE";
+            var alarmTitle = isInsert ? "[신규 모집공고 등록]" : "[모집공고 변경]";
+            var message = BuildSlackMessage(item, alarmTitle);
+            var sendResult = await _slackNotifier.SendAsync(message, cancellationToken);
+
+            try
+            {
+                _store.SaveAlarmLog(
+                    alarmSource: AlarmSource,
+                    subscribeIdx: null,
+                    pblancId: item.pblancId,
+                    alarmType: alarmType,
+                    targetDate: ParseNullableDate(item.rcritPblancDe),
+                    sendStatus: sendResult.SendStatus,
+                    alarmTitle: alarmTitle,
+                    alarmMessage: message,
+                    errorMessage: sendResult.ErrorMessage);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to write TB_ALARM_LOG. pblancId={PblancId}", item.pblancId);
+            }
+        }
+
+        private static string BuildSlackMessage(MyHomeRecruitItem item, string title)
+        {
             var link = string.IsNullOrWhiteSpace(item.pcUrl) ? item.url : item.pcUrl;
 
             return
@@ -294,6 +323,27 @@ namespace SeinServices.Api.Services.Chungyak
                 $"- 청약기간: {ToDateDash(item.beginDe)} ~ {ToDateDash(item.endDe)}\n" +
                 $"- 당첨자발표일: {ToDateDash(item.przwnerPresnatnDe)}\n" +
                 $"- 링크: {link}";
+        }
+
+        private static DateTime? ParseNullableDate(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return null;
+            }
+
+            var s = raw.Trim();
+            if (DateTime.TryParseExact(s, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+            {
+                return dt.Date;
+            }
+
+            if (DateTime.TryParse(s, out dt))
+            {
+                return dt.Date;
+            }
+
+            return null;
         }
 
         private static TbRcvhomeUpsertDto MapToRcvhome(MyHomeRecruitItem src)
