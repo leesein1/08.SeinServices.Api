@@ -13,6 +13,7 @@ builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.IRecruitSyncStore,
 builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.ISlackNotifier, SeinServices.Api.Services.Chungyak.SlackNotifier>();
 builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.RecruitSyncService>();
 builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.RcvhomeCloseService>();
+builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.SubscribeAlarmDispatchService>();
 
 var enableInProcessSchedulers = builder.Configuration.GetValue<bool>("Schedulers:EnableInProcess");
 if (enableInProcessSchedulers)
