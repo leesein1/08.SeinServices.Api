@@ -92,7 +92,11 @@ namespace SeinServices.Api.Services.Chungyak
                     };
                 }
 
-                var requestUrl = $"{baseUrl}?serviceKey={serviceKey}&brtcCode={brtcCode}&numOfRows={numOfRows}&pageNo=1";
+                var requestUrl =
+                    $"{baseUrl}?serviceKey={Uri.EscapeDataString(serviceKey)}" +
+                    $"&brtcCode={Uri.EscapeDataString(brtcCode)}" +
+                    $"&numOfRows={Uri.EscapeDataString(numOfRows)}" +
+                    "&pageNo=1";
                 var httpClient = _httpClientFactory.CreateClient();
                 using var response = await httpClient.GetAsync(requestUrl, cancellationToken);
                 response.EnsureSuccessStatusCode();
