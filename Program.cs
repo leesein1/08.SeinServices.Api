@@ -20,6 +20,7 @@ if (enableInProcessSchedulers)
 {
     builder.Services.AddHostedService<SeinServices.Api.Services.Schedules.RecruitSyncBackgroundService>();
     builder.Services.AddHostedService<SeinServices.Api.Services.Schedules.RcvhomeCloseBackgroundService>();
+    builder.Services.AddHostedService<SeinServices.Api.Services.Schedules.SubscribeAlarmDispatchBackgroundService>();
 }
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
