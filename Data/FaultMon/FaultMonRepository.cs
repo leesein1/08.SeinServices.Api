@@ -39,6 +39,23 @@ namespace SeinServices.Api.Data.FaultMon
                 cmd => cmd.Parameters.Add("@IncidentID", SqlDbType.Int).Value = incidentId);
         }
 
+        public int ExecuteScheduleRepeatInsert()
+        {
+            return ExecuteNonQuery("[dbo].[PROC_SCH_REPEAT_INSERT]");
+        }
+
+        private int ExecuteNonQuery(string procedureName, Action<SqlCommand>? configureCommand = null)
+        {
+            using var conn = _dbHelper.CreateConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.CommandText = procedureName;
+            configureCommand?.Invoke(cmd);
+
+            conn.Open();
+            return cmd.ExecuteNonQuery();
+        }
+
         private DataTable ExecuteStoredProcedure(string procedureName, Action<SqlCommand>? configureCommand = null)
         {
             var dt = new DataTable();

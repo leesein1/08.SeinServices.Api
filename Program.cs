@@ -1,4 +1,5 @@
 using Microsoft.OpenApi.Models;
+using SeinServices.Api.Hubs.FaultMon;
 using SeinServices.Api.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,10 +10,32 @@ builder.Services.AddControllers(options =>
     options.Conventions.Add(new ApiExplorerGroupConvention());
 });
 builder.Services.AddHttpClient();
+builder.Services.AddSignalR();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FaultMonCors", policy =>
+    {
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins);
+        }
+        else
+        {
+            policy.SetIsOriginAllowed(_ => true);
+        }
+
+        policy.AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 
 builder.Services.AddScoped<SeinServices.Api.Data.Chungyak.DBHelper>();
 builder.Services.AddScoped<SeinServices.Api.Data.FaultMon.FaultMonDbHelper>();
 builder.Services.AddScoped<SeinServices.Api.Data.FaultMon.FaultMonRepository>();
+builder.Services.AddSingleton<SeinServices.Api.Services.FaultMon.FaultMonConnectionTracker>();
 builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.ChungyakSearchService>();
 builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.ChungyakFavoriteService>();
 builder.Services.AddScoped<SeinServices.Api.Services.Chungyak.ScheduleLogService>();
@@ -30,6 +53,12 @@ if (enableInProcessSchedulers)
     builder.Services.AddHostedService<SeinServices.Api.Services.Schedules.RecruitSyncBackgroundService>();
     builder.Services.AddHostedService<SeinServices.Api.Services.Schedules.RcvhomeCloseBackgroundService>();
     builder.Services.AddHostedService<SeinServices.Api.Services.Schedules.SubscribeAlarmDispatchBackgroundService>();
+}
+
+var enableFaultMonSignalRScheduler = builder.Configuration.GetValue("FaultMon:EnableSignalRScheduler", true);
+if (enableFaultMonSignalRScheduler)
+{
+    builder.Services.AddHostedService<SeinServices.Api.Services.Schedules.FaultMonRepeatInsertBackgroundService>();
 }
 
 builder.Services.AddEndpointsApiExplorer();
@@ -75,8 +104,10 @@ if (!app.Environment.IsEnvironment("Docker"))
     app.UseHttpsRedirection();
 }
 
+app.UseCors("FaultMonCors");
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<FaultMonHub>("/hubs/faultmon");
 
 app.Run();

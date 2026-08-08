@@ -35,6 +35,11 @@ namespace SeinServices.Api.Services.FaultMon
             return ToRows(_repository.GetFaultListDetailPop(incidentId));
         }
 
+        public int ExecuteScheduleRepeatInsert()
+        {
+            return _repository.ExecuteScheduleRepeatInsert();
+        }
+
         private static List<Dictionary<string, object?>> ToRows(DataTable dataTable)
         {
             var rows = new List<Dictionary<string, object?>>();
