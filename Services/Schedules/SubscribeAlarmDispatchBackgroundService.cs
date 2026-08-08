@@ -1,20 +1,20 @@
-﻿using SeinServices.Api.Services.Chungyak;
+using SeinServices.Api.Services.Chungyak;
 
 namespace SeinServices.Api.Services.Schedules
 {
     /// <summary>
-    /// RecruitSyncBackgroundService 관련 기능을 제공합니다.
+    /// Dispatches due subscription alarms every hour on the hour.
     /// </summary>
-    public class RecruitSyncBackgroundService : BackgroundService
+    public class SubscribeAlarmDispatchBackgroundService : BackgroundService
     {
         private static readonly TimeZoneInfo KoreaTimeZone = ResolveKoreaTimeZone();
 
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly ILogger<RecruitSyncBackgroundService> _logger;
+        private readonly ILogger<SubscribeAlarmDispatchBackgroundService> _logger;
 
-        public RecruitSyncBackgroundService(
+        public SubscribeAlarmDispatchBackgroundService(
             IServiceScopeFactory scopeFactory,
-            ILogger<RecruitSyncBackgroundService> logger)
+            ILogger<SubscribeAlarmDispatchBackgroundService> logger)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
@@ -22,7 +22,7 @@ namespace SeinServices.Api.Services.Schedules
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Recruit scheduler started. Active window: 08:00~20:59 (KST), hourly on the hour.");
+            _logger.LogInformation("Subscribe alarm dispatch scheduler started. Hourly on the hour (KST).");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -34,7 +34,7 @@ namespace SeinServices.Api.Services.Schedules
                     delay = TimeSpan.FromSeconds(1);
                 }
 
-                _logger.LogInformation("Next scheduler tick at {NextTickKst:yyyy-MM-dd HH:mm:ss} KST", next);
+                _logger.LogInformation("Next subscribe alarm dispatch tick at {NextTickKst:yyyy-MM-dd HH:mm:ss} KST", next);
 
                 try
                 {
@@ -45,18 +45,19 @@ namespace SeinServices.Api.Services.Schedules
                     break;
                 }
 
-                var tickNow = GetKstNow();
-                if (tickNow.Hour < 8 || tickNow.Hour > 20)
-                {
-                    _logger.LogInformation("Skipped tick at {TickTimeKst:yyyy-MM-dd HH:mm:ss} KST (outside window).", tickNow);
-                    continue;
-                }
-
                 try
                 {
                     using var scope = _scopeFactory.CreateScope();
-                    var syncService = scope.ServiceProvider.GetRequiredService<RecruitSyncService>();
-                    await syncService.RunOnceAsync(stoppingToken);
+                    var dispatchService = scope.ServiceProvider.GetRequiredService<SubscribeAlarmDispatchService>();
+                    var result = await dispatchService.RunOnceAsync(stoppingToken);
+
+                    _logger.LogInformation(
+                        "Subscribe alarm dispatch tick completed. Success={Success}, Skipped={Skipped}, Claimed={ClaimedCount}, Sent={SuccessCount}, Failed={FailCount}",
+                        result.Success,
+                        result.Skipped,
+                        result.ClaimedCount,
+                        result.SuccessCount,
+                        result.FailCount);
                 }
                 catch (OperationCanceledException)
                 {
@@ -64,11 +65,11 @@ namespace SeinServices.Api.Services.Schedules
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Unhandled error in RecruitSyncBackgroundService tick.");
+                    _logger.LogError(ex, "Unhandled error in SubscribeAlarmDispatchBackgroundService tick.");
                 }
             }
 
-            _logger.LogInformation("Recruit scheduler stopped.");
+            _logger.LogInformation("Subscribe alarm dispatch scheduler stopped.");
         }
 
         private static DateTime GetKstNow()
@@ -96,4 +97,3 @@ namespace SeinServices.Api.Services.Schedules
         }
     }
 }
-

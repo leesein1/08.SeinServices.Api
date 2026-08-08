@@ -25,22 +25,53 @@ namespace SeinServices.Api.Services.Chungyak
         /// <summary>
         /// SendAsync 작업을 수행합니다.
         /// </summary>
-        public async Task SendAsync(string message, CancellationToken cancellationToken)
+        public async Task<SlackSendResult> SendAsync(string message, CancellationToken cancellationToken)
         {
             var webhookUrl = _configuration["SlackApi:BaseUrl"];
             if (string.IsNullOrWhiteSpace(webhookUrl) || string.IsNullOrWhiteSpace(message))
             {
-                return;
+                return new SlackSendResult
+                {
+                    IsSuccess = false,
+                    SendStatus = "SKIPPED",
+                    ErrorMessage = "Slack webhook URL or message is empty."
+                };
             }
 
-            var payload = JsonSerializer.Serialize(new { text = message });
-            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
-
-            var client = _httpClientFactory.CreateClient();
-            using var response = await client.PostAsync(webhookUrl, content, cancellationToken);
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                _logger.LogWarning("Slack webhook failed with status {StatusCode}", response.StatusCode);
+                var payload = JsonSerializer.Serialize(new { text = message });
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+                var client = _httpClientFactory.CreateClient();
+                using var response = await client.PostAsync(webhookUrl, content, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorMessage = $"Slack webhook failed with status {(int)response.StatusCode} ({response.StatusCode}).";
+                    _logger.LogWarning(errorMessage);
+                    return new SlackSendResult
+                    {
+                        IsSuccess = false,
+                        SendStatus = "FAIL",
+                        ErrorMessage = errorMessage
+                    };
+                }
+
+                return new SlackSendResult
+                {
+                    IsSuccess = true,
+                    SendStatus = "SUCCESS"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Slack webhook call failed.");
+                return new SlackSendResult
+                {
+                    IsSuccess = false,
+                    SendStatus = "FAIL",
+                    ErrorMessage = ex.Message
+                };
             }
         }
     }

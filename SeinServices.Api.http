@@ -5,3 +5,13 @@ Accept: application/json
 
 ###
 
+GET {{SeinServices.Api_HostAddress}}/api/schedule-log?StartedFrom=2026-04-01&StartedTo=2026-04-14&Status=SUCCESS&JobCode=SYNC
+Accept: application/json
+
+###
+
+GET {{SeinServices.Api_HostAddress}}/api/schedule-log/last?jobCode=1
+Accept: application/json
+
+###
+

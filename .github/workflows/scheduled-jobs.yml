@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: "sync or close"
+        description: "sync or close or dispatch"
         required: true
         default: "sync"
   schedule:
@@ -80,3 +80,22 @@ jobs:
           curl -sS --fail --retry 3 --retry-delay 5 \
             -H "X-Job-Key: $JOB_TRIGGER_API_KEY" \
             "$WEBAPP_BASE_URL/api/rcvhome-close/run-once"
+
+  dispatch:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'dispatch')
+    steps:
+      - name: Warmup
+        run: |
+          curl -sS --fail --retry 3 --retry-delay 5 \
+            -H "X-Job-Key: $JOB_TRIGGER_API_KEY" \
+            "$WEBAPP_BASE_URL/api/job-trigger/warmup"
+
+      - name: Wait for warmup
+        run: sleep ${WARMUP_DELAY_SECONDS:-30}
+
+      - name: Run subscribe alarm dispatch job
+        run: |
+          curl -sS --fail --retry 3 --retry-delay 5 \
+            -H "X-Job-Key: $JOB_TRIGGER_API_KEY" \
+            "$WEBAPP_BASE_URL/api/subscribe-alarm-dispatch/run-once"

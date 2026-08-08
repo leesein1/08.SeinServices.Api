@@ -5,7 +5,7 @@
     /// </summary>
     public interface ISlackNotifier
     {
-        Task SendAsync(string message, CancellationToken cancellationToken);
+        Task<SlackSendResult> SendAsync(string message, CancellationToken cancellationToken);
     }
 }
 
