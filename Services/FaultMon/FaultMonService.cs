@@ -1,5 +1,6 @@
 using System.Data;
 using SeinServices.Api.Data.FaultMon;
+using SeinServices.Api.Models.FaultMon.Requests;
 
 namespace SeinServices.Api.Services.FaultMon
 {
@@ -33,6 +34,11 @@ namespace SeinServices.Api.Services.FaultMon
         public List<Dictionary<string, object?>> GetFaultListDetailPop(int incidentId)
         {
             return ToRows(_repository.GetFaultListDetailPop(incidentId));
+        }
+
+        public List<Dictionary<string, object?>> SearchFaultHistory(FaultHistorySearchRequestDto request)
+        {
+            return ToRows(_repository.SearchFaultHistory(request));
         }
 
         public int ExecuteScheduleRepeatInsert()

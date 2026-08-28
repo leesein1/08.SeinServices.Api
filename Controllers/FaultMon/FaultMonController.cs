@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SeinServices.Api.Models.Common;
+using SeinServices.Api.Models.FaultMon.Requests;
 using SeinServices.Api.Services.FaultMon;
 
 namespace SeinServices.Api.Controllers.FaultMon
@@ -34,6 +35,16 @@ namespace SeinServices.Api.Controllers.FaultMon
         public ActionResult<List<Dictionary<string, object?>>> GetStatToday()
         {
             return ExecuteFaultMonQuery(_faultMonService.GetStatToday, "FAULTMON_STATS_QUERY_FAILED");
+        }
+
+        [HttpGet("faults/search")]
+        [ProducesResponseType(typeof(List<Dictionary<string, object?>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorResponseDto), StatusCodes.Status500InternalServerError)]
+        public ActionResult<List<Dictionary<string, object?>>> SearchFaultHistory([FromQuery] FaultHistorySearchRequestDto request)
+        {
+            return ExecuteFaultMonQuery(
+                () => _faultMonService.SearchFaultHistory(request),
+                "FAULTMON_HISTORY_SEARCH_QUERY_FAILED");
         }
 
         [HttpGet("faults/{incidentId:int}")]
