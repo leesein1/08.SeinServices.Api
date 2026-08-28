@@ -1,163 +1,311 @@
-﻿# SeinServices.Api
+# 🔌 SeinServices.Api
 
-청약 모집공고 데이터를 조회/동기화/마감 처리하는 ASP.NET Core Web API입니다.
+![.NET](https://img.shields.io/badge/.NET-8.0-purple)
+![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-Web%20API-512BD4)
+![SQL Server](https://img.shields.io/badge/SQL%20Server-Microsoft.Data.SqlClient-CC2927)
+![Docker](https://img.shields.io/badge/Docker-Container-2496ED)
 
-현재 운영 전략은 Azure Web App(F1)의 콜드 슬립 이슈를 고려해, 내부 스케줄러 대신 GitHub Actions Schedule이 API를 호출하는 구조를 기본으로 사용합니다.
+> 여러 개인 프로젝트에서 필요한 서버 기능을 한곳에서 관리하기 위해 만든 ASP.NET Core 기반 공용 백엔드 API입니다.
 
-## 1. 프로젝트 목적
+`SeinServices.Api`는 하나의 화면이나 하나의 서비스만을 위한 API로 시작하지 않았습니다.  
+청약 관리 서비스의 데이터 수집·조회·스케줄링을 담당하는 서버로 시작했고, 이후 FaultMon의 백엔드 기능까지 이관하면서 **여러 프로젝트의 API, DB 접근, 백그라운드 작업, 실시간 통신을 담당하는 공용 서버**로 확장했습니다.
 
-- 청약 모집공고 조회 API 제공
-- MyHome 외부 API 데이터를 로컬 DB에 동기화
-- 마감 공고 상태 일괄 갱신
-- 즐겨찾기(구독) 등록/해제 관리
+<p align="center">
+  <a href="https://api.silee.net/swagger">
+    <img src="https://img.shields.io/badge/Swagger-API%20문서%20보기-85EA2D?style=for-the-badge&logo=swagger&logoColor=black" alt="Swagger API 문서 보기" />
+  </a>
+</p>
 
-## 2. 핵심 기능
+---
 
-### 조회
+## 💛 왜 따로 만들었을까?
 
-- 전체 모집공고 조회
-- D-7(마감임박/접수중) 조회
-- 모집공고 상세 조회
-- 즐겨찾기 목록 조회
+프론트 프로젝트마다 외부 API 호출, DB 접근, 스케줄 작업 같은 서버 기능을 직접 포함시키기 시작하면 기능이 늘어날수록 역할이 섞이고 같은 운영 문제를 프로젝트마다 다시 처리해야 합니다.
 
-### 배치 실행
+그래서 청약 서비스를 만들면서 먼저 **프론트와 데이터 처리 영역을 분리한 별도 API 서버**를 구성했습니다.
 
-- 모집공고 동기화 1회 실행 (`/api/rcvhome-sync/run-once`)
-- 마감 처리 1회 실행 (`/api/rcvhome-close/run-once`)
-- 콜드슬립 완화용 웜업 (`/api/job-trigger/warmup`)
+이후 기존 MVC 구조로 구현했던 FaultMon을 React 기반 프론트로 개편하면서 FaultMon의 조회·실시간 처리 역시 이 서버로 옮겼습니다.
 
-### 즐겨찾기
+현재는 프로젝트별 프론트는 화면과 사용자 인터랙션에 집중하고, 이 서버가 다음 영역을 담당합니다.
 
-- 즐겨찾기 등록 (`POST /api/rcvhome-favorites/{pblancId}`)
-- 즐겨찾기 해제 (`DELETE /api/rcvhome-favorites/{pblancId}`)
+- 외부 공공 API 데이터 수집 및 내부 DB 동기화
+- 청약 공고 조회·즐겨찾기·마감 상태·알림 처리
+- 백그라운드 스케줄 실행 및 실행 로그 관리
+- FaultMon 고장 관제 데이터 조회·검색
+- SignalR 기반 FaultMon 실시간 갱신
+- 프로젝트별 DB 연결과 저장 프로시저 호출
 
-## 3. 아키텍처
+---
 
-```text
-GitHub Actions Scheduler
-        |
-        v
-Controllers (API contract + validation + error mapping)
-        |
-        v
-Services (business rules / orchestration)
-        |
-        v
-Data(DBHelper: SQL query, upsert, log)
-        |
-        v
-Azure SQL (TB_RCVHOME, TB_SUBSCRIBE, TB_RCVHOME_HIST, TB_ACC_LOG)
-```
+## 🧩 연결 프로젝트
 
-## 4. 프로젝트 구조
+### 🏡 Chungyak Manager
+
+React 기반 청약 관리 프론트에서 사용하는 백엔드입니다.
+
+- 청약 공고 검색 / 상세 조회
+- 외부 공공 API → 내부 DB 동기화
+- 즐겨찾기 및 알림 예정 데이터 관리
+- 마감 상태 자동 갱신
+- Slack 알림 발송 및 발송 로그
+- 스케줄 실행 로그 / 최근 동기화 상태 제공
+
+**Frontend**  
+[leesein1/chungyak_manage_web](https://github.com/leesein1/chungyak_manage_web)
+
+### 🚨 FaultMon
+
+기존 MVC 통합 구조에서 React + API 구조로 개편하면서 백엔드 기능을 이관했습니다.
+
+- 최근 고장 목록 / 금일 통계 / 상세 조회
+- 누적 고장 이력 조건 검색 및 페이징
+- 기존 FaultMon 경로 호환
+- SignalR Hub를 통한 실시간 연결
+- 접속자가 있을 때 반복 프로시저 실행 후 변경 이벤트 전파
+
+**Frontend**  
+[leesein1/FaultMon-Front](https://github.com/leesein1/FaultMon-Front)
+
+---
+
+## 🎯 이 API가 담당하는 역할
+
+### Chungyak
+
+- 청약 공고 목록 / 상세 / 마감 임박 조회
+- 즐겨찾기 등록·해제 및 목록 조회
+- 공공 API 데이터 동기화
+- 마감 공고 상태 갱신
+- 구독 알림 발송 및 Slack 연동
+- 스케줄 / 알림 실행 로그 조회
+- 수동 실행용 Job Trigger 제공
+
+### FaultMon
+
+- 최근 고장 접수 목록 조회
+- 금일 처리 현황 통계
+- 고장 상세 / 팝업 상세 조회
+- 누적 고장 이력 다중 조건 검색
+- SignalR 연결 및 접속자 수 관리
+- 관제 화면 접속 상태에 따른 반복 DB 작업 및 실시간 이벤트 전송
+
+### Common / Operation
+
+- 공통 오류 응답 처리
+- 도메인별 Swagger 문서 분리
+- 환경변수 기반 DB / API Key / Slack 설정
+- Docker 이미지 빌드 및 Docker Hub 배포
+- CORS 설정
+
+---
+
+## 🛠️ 기술 요약
+
+### Backend
+`C#` `.NET 8` `ASP.NET Core Web API`
+
+### Data
+`Microsoft.Data.SqlClient` `SQL Server` `Azure SQL` `Stored Procedure`
+
+### Realtime / Background
+`SignalR` `BackgroundService` `PeriodicTimer`
+
+### External Integration
+`공공데이터 API` `Slack Webhook`
+
+### Documentation / Operation
+`Swagger` `Swashbuckle` `Docker` `Docker Hub` `GitHub Actions`
+
+---
+
+## 🧩 설계 방향
+
+### 1️⃣ 프론트 기능과 서버 역할 분리
+
+React 프론트가 외부 API와 DB 처리까지 직접 담당하지 않도록 데이터 수집, 저장, 조회, 스케줄링을 API 서버로 분리했습니다.
+
+프론트는 HTTP API와 SignalR을 통해 필요한 데이터를 전달받도록 구성했습니다.
+
+### 2️⃣ 하나의 서버 안에서도 도메인 분리
+
+공용 API라고 해서 모든 기능을 한 구조에 섞지 않고 `Chungyak`, `FaultMon` 단위로 Controller / Service / Data / Model을 구분했습니다.
 
 ```text
 Controllers/
-  BaseController.cs
-  Chungyak/
-    JobTriggerController.cs
-    RcvhomeSearchController.cs
-    RcvhomeFavoriteController.cs
-    RcvhomeSyncController.cs
-    RcvhomeCloseController.cs
+├─ Chungyak/
+└─ FaultMon/
 
 Services/
-  Chungyak/
-    ChungyakSearchService.cs
-    ChungyakFavoriteService.cs
-    RecruitSyncService.cs
-    RcvhomeCloseService.cs
-    RecruitSyncStore.cs
-    SlackNotifier.cs
-  Schedules/
-    RecruitSyncBackgroundService.cs
-    RcvhomeCloseBackgroundService.cs
+├─ Chungyak/
+├─ FaultMon/
+└─ Schedules/
 
 Data/
-  Chungyak/
-    DBHelper.cs
-    DBHelper.*.cs
-
-Models/
-  Common/
-  Chungyak/
-    Requests/
-    Responses/
-    Internal/
-    External/
-    Enums/
+├─ Chungyak/
+└─ FaultMon/
 ```
 
-## 5. 기술 스택과 선택 이유
+### 3️⃣ HTTP 조회 + 백그라운드 작업을 같은 서버에서 관리
 
-- .NET 8 (ASP.NET Core Web API)
-  - 선택 이유: LTS, 고성능, DI/HostedService/미들웨어 기반 운영 표준에 적합
+청약 데이터 동기화, 마감 처리, 구독 알림처럼 사용자의 요청과 관계없이 실행되어야 하는 작업은 `BackgroundService`로 분리했습니다.
 
-- Microsoft.Data.SqlClient
-  - 선택 이유: Azure SQL 연결 안정성, 파라미터 바인딩/트랜잭션 제어 등 SQL Server 친화성
+필요한 경우 동일 로직을 `run-once` API로도 실행할 수 있어 자동 스케줄과 수동 실행을 함께 지원합니다.
 
-- Swashbuckle (Swagger)
-  - 선택 이유: API 계약 확인/테스트/협업 문서화 효율 향상
+### 4️⃣ 필요한 곳에만 실시간 통신 적용
 
-- Azure Web App + Azure SQL
-  - 선택 이유: 배포 간편성, 운영 자동화, 관리형 DB 사용 가능
+FaultMon은 관제 화면의 변경을 즉시 전달해야 하므로 일반 REST 조회와 별도로 SignalR Hub를 구성했습니다.
 
-- GitHub Actions Schedule (외부 스케줄러)
-  - 선택 이유: Web App F1 콜드 슬립 환경에서도 정시 실행 신뢰성 확보
+접속 Connection을 추적하고, 실제 관제 화면 접속자가 있을 때만 일정 주기로 저장 프로시저를 실행한 뒤 `Signal_FLTLIST` 이벤트를 전달하도록 구성했습니다.
 
-## 6. API 엔드포인트 요약
+### 5️⃣ API 문서를 도메인별로 분리
 
-### Search
+청약과 FaultMon API가 한 Swagger 문서에 섞이지 않도록 API Explorer Group을 사용해 문서를 분리했습니다.
 
-- `GET /api/rcvhome-search/rcvhomes`
-- `GET /api/rcvhome-search/deadline-soon`
-- `GET /api/rcvhome-search/rcvhomes/{pblancId}`
+Swagger UI에서 **청약 서비스 / FaultMon 고장 관제** 문서를 선택해 실제 운영 API 계약을 확인할 수 있습니다.
 
-### Favorite
+👉 [https://api.silee.net/swagger](https://api.silee.net/swagger)
 
-- `GET /api/rcvhome-favorites`
-- `POST /api/rcvhome-favorites/{pblancId}`
-- `DELETE /api/rcvhome-favorites/{pblancId}`
+### 6️⃣ 개발 환경 의존 → 컨테이너 기반 운영
 
-### Job Trigger (보호 대상)
+초기에는 Azure App Service 환경에서 운영했지만, 이후 Docker 이미지를 기준으로 실행할 수 있도록 변경했습니다.
 
-- `GET /api/job-trigger/warmup`
-- `GET /api/rcvhome-sync/run-once`
-- `GET /api/rcvhome-close/run-once`
+`main` 브랜치와 버전 태그가 push되면 GitHub Actions가 이미지를 빌드하고 Docker Hub에 `latest`, 버전, commit SHA 기준 태그로 배포합니다.
 
-위 3개 endpoint는 `X-Job-Key` 헤더가 필요합니다.
+---
 
-## 7. 스케줄 실행 전략 (현재 기본)
+## 🔄 동작 구조
 
-### 기본 원칙
+```text
+┌─────────────────────┐       ┌─────────────────────┐
+│ Chungyak React      │       │ FaultMon React      │
+│ Frontend            │       │ Frontend            │
+└──────────┬──────────┘       └──────────┬──────────┘
+           │ REST API                    │ REST / SignalR
+           └──────────────┬──────────────┘
+                          ▼
+                ┌───────────────────┐
+                │ SeinServices.Api  │
+                │ ASP.NET Core 8    │
+                └─────────┬─────────┘
+                          │
+          ┌───────────────┼────────────────┐
+          ▼               ▼                ▼
+   Chungyak Service   FaultMon Service   BackgroundService
+          │               │                │
+          ▼               ▼                ├─ 공고 동기화
+    Chungyak DB        FaultMon DB         ├─ 마감 처리
+          │               │                ├─ Slack 알림
+          │               │                └─ FaultMon 반복 작업
+          │               │
+          ▼               ▼
+   Public Data API   Stored Procedures
 
-- 인프로세스 스케줄러는 비활성화 기본값 사용
-- 외부 GitHub Actions 스케줄이 API를 호출해서 배치 실행
+                          │
+                          ▼
+                    SignalR Hub
+                          │
+                          ▼
+                   FaultMon Clients
+```
 
-### 호출 절차 (권장)
+---
 
-1. `GET /api/job-trigger/warmup`
-2. 30초 대기 (`JobTrigger:WarmupDelaySeconds`)
-3. `GET /api/rcvhome-sync/run-once` 또는 `GET /api/rcvhome-close/run-once`
+## 🔄 개발과 운영 구조 변화
 
-## 8. 설정
+이 API는 처음부터 현재 구조로 만들어진 것이 아니라 실제 운영 과정에서 필요한 기능을 추가하면서 확장했습니다.
 
-### appsettings 핵심 키
+- **2026-04-01** — 청약 공고 조회·동기화·마감 처리를 위한 API 서버 시작
+- **2026-04-02** — UTC/KST 차이로 발생한 마감 누락과 로그 시간 문제 수정
+- **2026-04-03 ~ 04-16** — 스케줄 실행 로그, 즐겨찾기 기반 알림, Slack 발송 로그와 자동 발송 추가
+- **2026-07-04 ~ 07-05** — Docker 실행 환경과 Docker Hub 자동 이미지 배포 구성
+- **2026-07-05** — 청약 알림 스케줄을 서버 내부에서도 실행할 수 있도록 `BackgroundService` 추가
+- **2026-08-08** — FaultMon 백엔드를 공용 API로 이관하고 청약 / FaultMon Swagger 문서 분리
+- **2026-08-08** — FaultMon SignalR Hub, 접속자 추적, 반복 스케줄러 추가
+- **2026-08-28** — FaultMon 누적 고장 이력 다중 조건 검색 / 페이징 API 추가
 
-- `ConnectionStrings:ChungyakDb`
-- `MyHomeApi:*`
-- `SlackApi:BaseUrl`
-- `Schedulers:EnableInProcess` (기본 `false`)
-- `JobTrigger:ApiKey`
-- `JobTrigger:WarmupDelaySeconds` (기본 `30`)
+---
 
-### Azure App Service 환경변수 권장
+## 🔍 트러블슈팅
 
-- `JobTrigger__ApiKey`
-- `JobTrigger__WarmupDelaySeconds`
-- 운영 비밀값(DB/Slack/API Key 등)은 포털 환경변수에서 관리
+### Azure Free 환경의 Sleep과 스케줄 실행
 
-## 9. 로컬 실행
+초기에는 Azure App Service Free 환경에서 API를 운영했습니다.
+
+유휴 상태에서 애플리케이션이 Sleep 상태로 전환될 수 있어 `BackgroundService`만으로 정기 작업 실행을 보장하기 어려웠고, 이를 우회하기 위해 GitHub Actions에서 먼저 warm-up 요청을 보낸 뒤 실제 작업 API를 호출하도록 구성했습니다.
+
+이후 홈서버에서 Docker 컨테이너로 API를 상시 실행할 수 있게 되면서 서버 내부 스케줄링을 사용할 수 있는 구조로 확장했습니다. 외부 트리거 방식도 `run-once` API와 Workflow 형태로 남겨 필요할 때 사용할 수 있도록 했습니다.
+
+### UTC / KST 차이로 인한 마감 처리 누락
+
+Azure SQL과 실행 환경의 시간 기준이 UTC인 상태에서 날짜를 단순 비교하면서 한국시간 자정 이후에도 전날로 판단되는 구간이 생겼습니다.
+
+마감 처리와 공고 상태 판단에 `DATEADD(hour, 9, GETUTCDATE())` 기준을 적용하고, 로그와 이력 저장 시간 역시 KST 기준으로 맞춰 날짜 경계에서도 동일하게 처리되도록 수정했습니다.
+
+### 외부 공공 API Query Parameter 처리
+
+공공 API 호출 시 검색 조건에 포함되는 문자열이 URL에 그대로 들어가면서 특수문자와 공백이 있는 경우 요청이 정상적으로 전달되지 않을 수 있었습니다.
+
+Query Parameter를 URL Encoding한 뒤 요청하도록 수정해 입력값에 따른 호출 오류를 줄였습니다.
+
+### FaultMon 실시간 작업의 불필요한 반복 실행
+
+FaultMon의 반복 DB 작업은 관제 화면이 열려 있을 때 의미가 있지만 사용자가 없는 상황에서도 계속 실행하면 불필요한 DB 작업이 됩니다.
+
+SignalR Connection ID를 `ConcurrentDictionary`로 관리하고 활성 연결 수가 0이면 반복 프로시저 실행을 건너뛰도록 구성했습니다. 접속자가 있을 때만 작업 후 SignalR 이벤트를 전송합니다.
+
+### 기존 FaultMon 경로와 신규 API 구조 병행
+
+FaultMon 프론트를 점진적으로 분리하는 과정에서 기존 MVC 호출 경로를 한 번에 제거하면 기존 화면과의 호환 문제가 발생할 수 있었습니다.
+
+신규 `/api/faultmon/...` 경로와 기존 `/Fault/...` 경로를 함께 매핑해 백엔드를 먼저 이관하면서도 기존 호출을 유지할 수 있도록 구성했습니다.
+
+---
+
+## 👤 현재 운영 범위
+
+현재 `SeinServices.Api`는 **개인 프로젝트에서 실제 사용하는 공용 백엔드 서버**입니다.
+
+청약 서비스와 FaultMon은 서로 다른 목적과 DB를 사용하지만, 개인 프로젝트마다 별도 API 서버를 반복해서 운영하기보다 공통 운영 환경을 공유하고 코드 내부에서는 도메인을 분리하는 방식을 사용하고 있습니다.
+
+인증·회원 시스템을 제공하는 범용 SaaS 백엔드를 목표로 한 프로젝트는 아니며, 현재 연결된 프로젝트에서 필요한 서버 기능을 안정적으로 제공하는 범위에 집중하고 있습니다.
+
+---
+
+## 🌱 현재 상태
+
+- [x] 청약 공고 조회 / 상세 / 마감 임박 검색
+- [x] 공공 API 데이터 동기화
+- [x] 즐겨찾기 / 구독 알림 / Slack 연동
+- [x] 스케줄 및 알림 로그 관리
+- [x] BackgroundService 기반 정기 작업
+- [x] Docker / Docker Hub 배포
+- [x] FaultMon 백엔드 API 이관
+- [x] FaultMon 누적 이력 검색 / 페이징
+- [x] SignalR 기반 FaultMon 실시간 갱신
+- [x] 청약 / FaultMon Swagger 문서 분리
+
+---
+
+## ✨ 마무리
+
+처음에는 청약 서비스에서 필요한 서버 기능을 분리하기 위해 시작했습니다.
+
+이후 실제 운영 과정에서 스케줄링과 시간대 문제를 수정하고 Docker 배포 구조를 추가했으며, FaultMon 개편 과정에서는 기존 백엔드까지 이관하면서 **여러 개인 프로젝트의 서버 기능을 담당하는 공용 ASP.NET Core API**로 확장했습니다.
+
+현재는 기능을 한곳에 단순히 모으는 것보다, **공통 운영 환경 안에서 프로젝트별 역할을 구분하고 필요한 API·배치·실시간 기능을 각각 관리하는 구조**로 유지하고 있습니다.
+
+---
+
+<details>
+<summary><b>API / 개발 / 배포 참고</b></summary>
+<br/>
+
+### Swagger
+
+- 운영 문서: https://api.silee.net/swagger
+- 청약 서비스 / FaultMon 고장 관제 문서 분리
+
+### Local Run
 
 ```bash
 dotnet restore
@@ -165,67 +313,40 @@ dotnet build
 dotnet run
 ```
 
-- 기본 실행 URL은 `Properties/launchSettings.json` 참조
-- Swagger UI에서 엔드포인트 테스트 가능
+### Docker
 
-## 10. 트러블슈팅 기록
+```bash
+docker build -t seinservices-api .
+docker run -p 8080:8080 seinservices-api
+```
 
-### 10.1 Azure F1 콜드 슬립으로 인한 스케줄 누락 리스크
+### 주요 환경 설정
 
-- 문제: F1 환경에서 앱 유휴 시 슬립 발생, 내부 `BackgroundService` 스케줄 누락 가능
-- 원인: F1은 `Always On` 미지원으로 프로세스 상주 보장 불가
-- 조치: GitHub Actions Schedule + warmup(30초) + run-once 호출 구조로 변경
-- 결과: 앱 슬립 여부와 분리된 외부 스케줄 제어로 정시 실행 안정성 개선
+```text
+ConnectionStrings__ChungyakDb
+ConnectionStrings__FaultMonDb
+MyHomeApi__ServiceKey
+SlackApi__BaseUrl
+JobTrigger__ApiKey
+Schedulers__EnableInProcess
+FaultMon__EnableSignalRScheduler
+FaultMon__RepeatInsertIntervalSeconds
+Cors__AllowedOrigins__0
+```
 
-### 10.2 run-once 엔드포인트 노출 위험
+DB Connection String, API Key, Slack 주소 등의 비밀값은 저장소에 직접 저장하지 않고 실행 환경의 환경변수로 주입합니다.
 
-- 문제: 외부에서 run-once를 임의 호출할 수 있는 보안 리스크
-- 조치: `X-Job-Key` 기반 인증 추가
-- 결과: 승인된 트리거(GitHub Actions)만 배치 엔드포인트 호출 가능
+### 주요 Endpoint
 
-### 10.3 Azure SQL UTC 기준 시간으로 인한 마감 처리 지연
+정확한 Request / Response와 현재 Endpoint는 운영 Swagger에서 확인할 수 있습니다.
 
-- 문제: GitHub Actions는 한국시간 새벽 3시대에 `close`를 호출했지만, Azure SQL의 `GETDATE()`가 UTC 기준으로 동작해 `END_DE < 오늘` 비교가 한국 날짜와 어긋날 수 있었음
-- 원인: DB 서버 현재 시간은 `GETDATE()`와 `GETUTCDATE()`가 동일하게 반환되어 UTC 기준으로 판단됨
-- 조치: 마감 처리와 조회 상태 계산에서 `CAST(DATEADD(hour, 9, GETUTCDATE()) AS date)`를 공통으로 사용해 KST 날짜 기준으로 비교하도록 수정
-- 결과: 한국시간 기준 날짜 경계(특히 00:00~08:59)에서도 `접수예정 / 접수중 / 접수마감` 및 `close` 배치가 일관되게 동작
+- `/api/rcvhome-search/*`
+- `/api/rcvhome-favorites/*`
+- `/api/rcvhome-sync/*`
+- `/api/rcvhome-close/*`
+- `/api/schedule-log/*`
+- `/api/alarm-log/*`
+- `/api/faultmon/*`
+- `/hubs/faultmon`
 
-### 10.4 DB 로그 시각이 KST 대비 -9시간으로 저장되는 문제
-
-- 문제: `TB_SCH_LOG` 및 일부 이력/접근 로그의 시각이 UTC 기준으로 저장되어 운영 화면에서 KST 대비 `-9시간`으로 보임
-- 원인: C# `DateTime.UtcNow`와 SQL `GETDATE()/SYSDATETIME()` 혼용으로 로그 저장 기준이 환경 시간대(UTC)에 종속됨
-- 조치: 로그/이력 시각 저장을 KST 기준으로 통일
-- 상세:
-- `TB_SCH_LOG` 저장 시각(`STARTED_AT/ENDED_AT`)은 저장 직전에 KST로 변환
-- `TB_ACC_LOG`, `TB_RCVHOME_HIST`, `TB_SUBSCRIBE`, `TB_RCVHOME.CREATED_AT/UPDATED_AT` 저장식은 `DATEADD(hour, 9, GETUTCDATE())` 사용
-- 결과: 신규로 쌓이는 로그/이력 시각이 한국시간 기준으로 일관되게 기록됨
-
-## 11. 운영 체크리스트
-
-- `Schedulers:EnableInProcess=false` 확인
-- `JobTrigger__ApiKey`를 충분히 긴 랜덤 값으로 설정
-- GitHub Actions에서 동일 키를 `X-Job-Key`로 전달
-- 배치 호출 시 warmup -> 대기 -> run-once 순서 준수
-- Azure SQL 시간은 UTC일 수 있으므로, 날짜 비교 SQL은 반드시 KST 보정식(`DATEADD(hour, 9, GETUTCDATE())`) 기준 사용
-- 장애 시 GitHub Actions/App Service/Application Insights 로그 함께 확인
-
-## 12. GitHub Actions 스케줄 배치
-
-이 저장소에는 무료 스케줄 실행을 위한 워크플로우가 포함되어 있습니다.
-
-- 워크플로우 파일: `.github/workflows/scheduled-jobs.yml`
-- 동작 방식:
-  - `warmup` 호출
-  - `30초 대기`
-  - `run-once` 호출
-
-### GitHub Secrets / Variables
-
-- `WEBAPP_BASE_URL` (예: `https://<your-webapp>.azurewebsites.net`)
-- `JOB_TRIGGER_API_KEY` (App Service의 `JobTrigger:ApiKey`와 동일값)
-- `WARMUP_DELAY_SECONDS` (Repository Variable, 기본 30)
-
-### 수동 실행
-
-- Actions 탭에서 `Scheduled Jobs` 워크플로우를 `workflow_dispatch`로 실행 가능
-- input `target` 값으로 `sync` 또는 `close` 선택
+</details>
