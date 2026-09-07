@@ -215,6 +215,19 @@ namespace SeinServices.Api.Services.Chungyak
                     ErrorCount = errorCount
                 };
             }
+            catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                const string timeoutMessage = "Sync timed out while calling external API.";
+                _logger.LogWarning(ex, timeoutMessage);
+                TrySaveAccLog(actionName, "00", timeoutMessage);
+                SaveScheduleLog(SyncJobCode, "FAIL", startedAt, timeoutMessage);
+
+                return new SyncRunResponseDto
+                {
+                    Success = false,
+                    Message = timeoutMessage
+                };
+            }
             catch (OperationCanceledException)
             {
                 _logger.LogInformation("Recruit sync cancelled.");

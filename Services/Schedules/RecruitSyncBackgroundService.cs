@@ -8,6 +8,8 @@ namespace SeinServices.Api.Services.Schedules
     public class RecruitSyncBackgroundService : BackgroundService
     {
         private static readonly TimeZoneInfo KoreaTimeZone = ResolveKoreaTimeZone();
+        private static readonly TimeSpan RetryDelay = TimeSpan.FromMinutes(1);
+        private const int MaxRetryCount = 3;
 
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<RecruitSyncBackgroundService> _logger;
@@ -54,13 +56,15 @@ namespace SeinServices.Api.Services.Schedules
 
                 try
                 {
-                    using var scope = _scopeFactory.CreateScope();
-                    var syncService = scope.ServiceProvider.GetRequiredService<RecruitSyncService>();
-                    await syncService.RunOnceAsync(stoppingToken);
+                    await ExecuteSyncWithRetriesAsync(stoppingToken);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
                     break;
+                }
+                catch (OperationCanceledException ex)
+                {
+                    _logger.LogWarning(ex, "Recruit sync tick was cancelled without host shutdown. Scheduler will continue.");
                 }
                 catch (Exception ex)
                 {
@@ -69,6 +73,50 @@ namespace SeinServices.Api.Services.Schedules
             }
 
             _logger.LogInformation("Recruit scheduler stopped.");
+        }
+
+        private async Task ExecuteSyncWithRetriesAsync(CancellationToken stoppingToken)
+        {
+            for (var attempt = 0; attempt <= MaxRetryCount; attempt++)
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var syncService = scope.ServiceProvider.GetRequiredService<RecruitSyncService>();
+                var result = await syncService.RunOnceAsync(stoppingToken);
+
+                _logger.LogInformation(
+                    "Recruit sync tick attempt {Attempt}/{MaxAttempt} completed. Success={Success}, Skipped={Skipped}, Total={TotalCount}, Insert={InsertCount}, Update={UpdateCount}, None={NoneCount}, Error={ErrorCount}, Message={Message}",
+                    attempt + 1,
+                    MaxRetryCount + 1,
+                    result.Success,
+                    result.Skipped,
+                    result.TotalCount,
+                    result.InsertCount,
+                    result.UpdateCount,
+                    result.NoneCount,
+                    result.ErrorCount,
+                    result.Message);
+
+                if (result.Success || result.Skipped)
+                {
+                    return;
+                }
+
+                if (attempt == MaxRetryCount)
+                {
+                    _logger.LogWarning(
+                        "Recruit sync failed after {AttemptCount} attempts. Scheduler will retry at the next hourly tick.",
+                        MaxRetryCount + 1);
+                    return;
+                }
+
+                _logger.LogWarning(
+                    "Recruit sync attempt {Attempt}/{MaxAttempt} failed. Retrying in {RetryDelaySeconds} seconds.",
+                    attempt + 1,
+                    MaxRetryCount + 1,
+                    RetryDelay.TotalSeconds);
+
+                await Task.Delay(RetryDelay, stoppingToken);
+            }
         }
 
         private static DateTime GetKstNow()
