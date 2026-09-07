@@ -26,6 +26,25 @@ namespace SeinServices.Api.Services.Schedules
         {
             _logger.LogInformation("Recruit scheduler started. Active window: 08:00~20:59 (KST), hourly on the hour.");
 
+            try
+            {
+                _logger.LogInformation("Running initial recruit sync on scheduler startup.");
+                await ExecuteSyncWithRetriesAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Recruit scheduler stopped during initial sync.");
+                return;
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogWarning(ex, "Initial recruit sync was cancelled without host shutdown. Scheduler will continue.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled error in initial recruit sync. Scheduler will continue.");
+            }
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 var now = GetKstNow();

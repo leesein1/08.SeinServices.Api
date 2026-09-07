@@ -7,9 +7,6 @@ on:
         description: "sync or close or dispatch"
         required: true
         default: "sync"
-  schedule:
-    - cron: "0 * * * *"   # hourly (UTC) for sync window check
-    - cron: "0 18 * * *"  # 03:00 KST close job
 
 env:
   WEBAPP_BASE_URL: ${{ secrets.WEBAPP_BASE_URL }}
@@ -19,7 +16,7 @@ env:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'sync')
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'sync'
     steps:
       - name: Decide sync window (KST 08:00-20:59)
         id: gate
@@ -51,7 +48,7 @@ jobs:
 
   close:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'close')
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'close'
     steps:
       - name: Check close schedule (03:00 KST)
         id: gate
@@ -83,7 +80,7 @@ jobs:
 
   dispatch:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'dispatch')
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'dispatch'
     steps:
       - name: Warmup
         run: |
