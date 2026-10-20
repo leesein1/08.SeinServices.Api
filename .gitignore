@@ -16,6 +16,7 @@ Thumbs.db
 *.log
 
 # Local secrets
+**/Secrets.h
 .env
 .env.*
 !.env.example

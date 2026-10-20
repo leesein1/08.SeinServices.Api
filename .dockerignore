@@ -7,6 +7,8 @@ Dockerfile
 docker-compose.yml
 README.md
 Tests
+Firmware
+**/Secrets.h
 **/appsettings.Development.json
 **/appsettings.Local.json
 **/.env

@@ -77,7 +77,35 @@
 
 질문만 보내면 서버가 검색을 판단합니다. 검색용 파라미터나 Tavily 키를 Postman에 보낼 필요가 없습니다. 응답의 `searchUsed`와 `sources`로 검색 경로와 출처를 확인할 수 있습니다. 인사 테스트는 `{ "message": "안녕!" }`을 보냅니다. 전체 서버 처리 제한은 75초이므로 클라이언트 대기 시간은 85초 이상을 권장합니다.
 
-#### 설정과 인증
+#### ESP32 OLED에 답변 실시간 표시
+
+ESP32는 `wss://api.silee.net/api/deskbuddy/device/ws`에 연결을 유지합니다. WebSocket 업그레이드 요청의 `X-Device-Key` 헤더로 `/chat`과 동일한 장치 키를 보냅니다. URL에 키를 넣지 않습니다. 정상 연결 후 다음 이벤트가 옵니다.
+
+```json
+{ "type": "device.ready" }
+```
+
+이 상태에서 Postman으로 기존 `POST /api/deskbuddy/chat`에 질문하면 HTTP 응답과 함께 연결된 화면에 아래 이벤트를 전달합니다. ESP32 메모리를 절약하도록 출처 URL 목록은 장치 이벤트에서 제외합니다.
+
+```json
+{
+  "type": "chat.answer",
+  "id": "이벤트마다 다른 식별자",
+  "reply": "안녕! 오늘은 무슨 이야기 하고 싶어?",
+  "emotion": "happy",
+  "searchUsed": false
+}
+```
+
+- 현재는 하나의 장치 키를 공유하는 연결된 모든 화면으로 전송합니다. 장치별 선택 전송이나 사용자별 대화방은 없습니다.
+- 장치가 없어도 `/chat`은 정상 동작합니다. HTTP 200은 화면 표시 완료 확인을 뜻하지 않습니다.
+- 소켓별 전송 대기열은 4개이며 느린 장치는 오래된 대기 이벤트부터 버립니다. 전송 제한은 10초입니다. 오프라인 기록/재접속 시 이전 답변 재생은 제공하지 않습니다.
+- 일반 GET으로 소켓 URL을 열면 400입니다. Postman의 **WebSocket 요청**에서 URL과 장치 키 헤더를 설정하면 `device.ready`와 실제 이벤트를 확인할 수 있습니다. Swagger는 연결 규격을 문서화하며 직접 소켓을 열지는 않습니다.
+- 장치 코드는 `Firmware/DeskBuddy_DisplayClient` 참고. 로컬 Arduino 스케치도 `Documents/Arduino/DeskBuddy_DisplayClient`에 저장합니다. Wi-Fi/장치 키는 로컬 `Secrets.h`로 분리하며 Git과 Docker 이미지에 포함하지 않습니다.
+- 화면은 3줄 단위로 표시하고 긴 답변은 6초마다 페이지를 순환합니다. 수신 시 한 번만 줄바꿈하고, 내용/페이지/연결 상태가 바뀔 때만 화면 버퍼를 전송합니다. Wi-Fi/소켓 재연결 및 heartbeat를 사용합니다.
+- TLS 인증서 검증을 사용하며 연결 전에 NTP 시각을 맞춥니다. 현재 Google Trust Services Root R4를 사용합니다. 서버 인증서의 루트가 바뀌면 `ServerRootCA.h`를 갱신해야 합니다. 인증서 검증을 끄지 않습니다.
+
+#### 서버 환경변수
 
 | 환경변수 | 기본값 / 설명 |
 |---|---|
@@ -143,7 +171,7 @@ cd C:\workspace_silee\home-server
 docker compose up -d --no-deps --pull never --force-recreate seinservices-api
 ```
 
-검색 연동 운영 이미지는 `silee98/seinservices-api:deskbuddy-search-20261020`이며 Docker Hub에서 내려받을 수 있습니다. `main` 브랜치의 GitHub Actions는 별도로 `latest`와 commit SHA 태그를 게시합니다. `deskbuddy.env`의 비밀 값은 소스에 복사하지 마세요. 검색 연동 이전 이미지 `silee98/seinservices-api:deskbuddy-20261020`도 로컬에 유지됩니다.
+화면 연동 운영 이미지는 `silee98/seinservices-api:deskbuddy-display-20261020`이며 Docker Hub에서 내려받을 수 있습니다. `main` 브랜치의 GitHub Actions는 별도로 `latest`와 commit SHA 태그를 게시합니다. `deskbuddy.env`의 비밀 값은 소스에 복사하지 마세요. 검색 연동 이전 이미지 `silee98/seinservices-api:deskbuddy-20261020`도 로컬에 유지됩니다.
 
 #### 검증
 

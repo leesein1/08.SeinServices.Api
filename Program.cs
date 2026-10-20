@@ -20,6 +20,7 @@ builder.Services.AddHttpClient<TavilyClient>(client => client.Timeout = Timeout.
 builder.Services.Configure<DeskBuddyOptions>(builder.Configuration.GetSection("DeskBuddy"));
 builder.Services.AddHttpClient<GeminiClient>(client => client.Timeout = Timeout.InfiniteTimeSpan);
 builder.Services.AddScoped<DeskBuddyService>();
+builder.Services.AddSingleton<DeskBuddyDeviceConnections>();
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("deskbuddy", limiter =>
@@ -146,6 +147,7 @@ if (!app.Environment.IsEnvironment("Docker"))
 }
 
 app.UseCors("FaultMonCors");
+app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
 app.UseRateLimiter();
 app.UseAuthorization();
 

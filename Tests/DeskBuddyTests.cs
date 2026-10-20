@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.WebSockets;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -96,9 +97,12 @@ public sealed class DeskBuddyTests
         using var client = app.CreateClient();
         var json = await client.GetStringAsync("/swagger/deskbuddy/swagger.json");
         using var document = JsonDocument.Parse(json);
-        Assert.Single(document.RootElement.GetProperty("paths").EnumerateObject());
+        Assert.Equal(2, document.RootElement.GetProperty("paths").EnumerateObject().Count());
         var operation = document.RootElement.GetProperty("paths").GetProperty("/api/deskbuddy/chat").GetProperty("post");
         Assert.Contains(operation.GetProperty("parameters").EnumerateArray(), p => p.GetProperty("name").GetString() == "X-Device-Key");
+        var socketOperation = document.RootElement.GetProperty("paths").GetProperty("/api/deskbuddy/device/ws").GetProperty("get");
+        Assert.Contains(socketOperation.GetProperty("parameters").EnumerateArray(), p =>
+            p.GetProperty("name").GetString() == "X-Device-Key" && p.GetProperty("required").GetBoolean());
         Assert.Contains("429", json);
         Assert.DoesNotContain("/api/deskbuddy", await client.GetStringAsync("/swagger/chungyak/swagger.json"));
         Assert.Contains("/swagger/deskbuddy/swagger.json", await client.GetStringAsync("/swagger/index.html"));
@@ -294,6 +298,74 @@ public sealed class DeskBuddyTests
         Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
         Assert.Equal(1, app.SearchCalls);
         Assert.Contains("GEMINI_INVALID_RESPONSE", await response.Content.ReadAsStringAsync());
+    }
+
+    [Theory]
+    [InlineData(null, 401)]
+    [InlineData("wrong", 401)]
+    [InlineData("test-device-key", 400)]
+    public async Task SocketEndpoint_RequiresAuthenticationAndUpgrade(string? key, int expectedStatus)
+    {
+        using var app = new TestApi();
+        using var client = app.CreateClient();
+        if (key != null) client.DefaultRequestHeaders.Add("X-Device-Key", key);
+        Assert.Equal(expectedStatus, (int)(await client.GetAsync("/api/deskbuddy/device/ws")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Chat_PushesSameAnswerToEveryConnectedDisplay()
+    {
+        using var app = new TestApi();
+        using var client = app.CreateDeviceClient();
+        var wsClient = app.Server.CreateWebSocketClient();
+        wsClient.ConfigureRequest = request => request.Headers["X-Device-Key"] = "test-device-key";
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var first = await wsClient.ConnectAsync(new Uri("ws://localhost/api/deskbuddy/device/ws"), deadline.Token);
+        using var second = await wsClient.ConnectAsync(new Uri("ws://localhost/api/deskbuddy/device/ws"), deadline.Token);
+        Assert.Contains("device.ready", await ReceiveTextAsync(first, deadline.Token));
+        Assert.Contains("device.ready", await ReceiveTextAsync(second, deadline.Token));
+        var response = await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "안녕" }, deadline.Token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var one = await ReceiveTextAsync(first, deadline.Token);
+        var two = await ReceiveTextAsync(second, deadline.Token);
+        Assert.Equal(one, two);
+        using var pushed = JsonDocument.Parse(one);
+        Assert.Equal("chat.answer", pushed.RootElement.GetProperty("type").GetString());
+        Assert.Equal("안녕!", pushed.RootElement.GetProperty("reply").GetString());
+        Assert.Equal("happy", pushed.RootElement.GetProperty("emotion").GetString());
+        Assert.False(pushed.RootElement.GetProperty("searchUsed").GetBoolean());
+        Assert.DoesNotContain("test-device-key", one);
+        Assert.DoesNotContain("test-gemini-key", one);
+        Assert.DoesNotContain("sources", one); // Keep the ESP32 event small.
+    }
+
+    [Fact]
+    public async Task DisconnectedDisplay_DoesNotBreakChat()
+    {
+        using var app = new TestApi();
+        using var client = app.CreateDeviceClient();
+        var wsClient = app.Server.CreateWebSocketClient();
+        wsClient.ConfigureRequest = request => request.Headers["X-Device-Key"] = "test-device-key";
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var socket = await wsClient.ConnectAsync(new Uri("ws://localhost/api/deskbuddy/device/ws"), deadline.Token);
+        await ReceiveTextAsync(socket, deadline.Token);
+        await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "done", deadline.Token);
+        var response = await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "안녕" }, deadline.Token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    private static async Task<string> ReceiveTextAsync(WebSocket socket, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[4096];
+        using var output = new MemoryStream();
+        WebSocketReceiveResult result;
+        do
+        {
+            result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
+            Assert.Equal(WebSocketMessageType.Text, result.MessageType);
+            output.Write(buffer, 0, result.Count);
+        } while (!result.EndOfMessage);
+        return Encoding.UTF8.GetString(output.ToArray());
     }
 
     private sealed class TestApi(string? missingSetting = null) : WebApplicationFactory<Program>
