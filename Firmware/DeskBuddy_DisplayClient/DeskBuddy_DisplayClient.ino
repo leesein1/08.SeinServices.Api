@@ -22,7 +22,7 @@ constexpr size_t MAX_REPLY_BYTES = 2400;  // UTF-8 원문 길이 제한. 잘못�
 constexpr uint32_t SCROLL_STEP_MS = 65;   // 65ms마다 왼쪽으로 1픽셀. 큰 값일수록 느리다.
 constexpr uint32_t START_HOLD_MS = 1200;  // 새 답변의 첫 부분을 잠깐 멈춰 보여주는 시간.
 constexpr uint8_t REPEAT_COUNT = 2;       // 답변을 끝까지 스크롤할 횟수.
-constexpr uint32_t WAITING_INTERVAL_MS = 200; // 점 하나당 0.2초, .→..→... 한 바퀴는 0.6초.
+constexpr uint32_t WAITING_INTERVAL_MS = 1200; // 점 하나당 1.2초, .→..→... 한 바퀴는 3.6초.
 
 DeskBuddyEyes face(oled, TEXT_TOP); // 같은 버퍼의 위쪽에만 눈 애니메이션을 그린다.
 
@@ -261,7 +261,7 @@ void loop() {
     }
   }
   if (wifiConnected && socketStarted) socketClient.loop();
-  if (face.update(millis())) frameDirty = true;
+  if (face.update(millis(), playing)) frameDirty = true; // 답변 중에는 대기용 표정 변화가 끼어들지 않는다.
   advanceTicker(millis());
   const uint32_t waitingNow = millis();
   if (!playing && waitingNow - lastWaitingAt >= WAITING_INTERVAL_MS) {

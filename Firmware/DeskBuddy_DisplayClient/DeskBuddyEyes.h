@@ -90,11 +90,14 @@ class RoboEyesCanvas {
 class DeskBuddyEyes {
  public:
   // 변경하기 쉬운 기본 모양. 픽셀 단위이며 아래 자막 영역과 별개다.
-  static constexpr uint8_t FRAME_RATE = 20;  // 최대 초당 20프레임. 같은 그림은 전송하지 않는다.
+  static constexpr uint8_t FRAME_RATE = 30;  // 눈을 감고 뜨는 전환을 빠르고 부드럽게 한다.
   static constexpr uint8_t EYE_WIDTH = 30;   // 기본 눈 한 개의 너비.
   static constexpr uint8_t EYE_HEIGHT = 26;  // 기본 눈 한 개의 높이.
   static constexpr uint8_t EYE_GAP = 16;     // 두 눈 사이 간격.
   static constexpr uint8_t EYE_RADIUS = 8;   // 눈 모서리의 둥근 정도.
+  static constexpr uint8_t BLINK_INTERVAL = 4;  // 깜빡임 최소 간격(초).
+  static constexpr uint8_t BLINK_VARIATION = 4; // 0~3초를 더해 총 4~7초 간격으로 깜빡인다.
+  static constexpr uint32_t IDLE_POSE_DURATION_MS = 1000; // 호기심 표정은 잠깐만 유지한다.
 
   DeskBuddyEyes(U8G2 &screen, uint8_t height) : canvas_(screen, height), eyes_(canvas_), height_(height) {}
 
@@ -102,8 +105,8 @@ class DeskBuddyEyes {
     eyes_.begin(128, height_, FRAME_RATE);
     eyes_.setDisplayColors(0, 1);
     eyes_.setSpacebetween(EYE_GAP);
-    eyes_.setAutoblinker(true, 2, 3); // 보통 2~4초 사이에 한 번씩 자동 깜빡임.
-    eyes_.setIdleMode(false);        // 시선은 아래 좌/중앙/우 순서로 직접 제어한다.
+    eyes_.setAutoblinker(true, BLINK_INTERVAL, BLINK_VARIATION);
+    eyes_.setIdleMode(false);        // 아래에서 정면/좌우/약간 위아래 시선을 직접 제어한다.
     eyes_.setCuriosity(true);        // 옆을 볼 때 바깥쪽 눈을 약간 키워 호기심을 표현한다.
     setEmotion("neutral");
     // 원본은 화면 크기/눈 간격을 바꾸기 전 기본 좌표를 생성자에서 계산한다.
@@ -123,6 +126,10 @@ class DeskBuddyEyes {
   // 서버에서 받은 감정 이름을 RoboEyes의 실제 눈 모양으로 연결한다.
   // 알려지지 않은 값은 기본 표정으로 처리해 잘못된 데이터에도 계속 동작한다.
   void setEmotion(const char *name) {
+    neutral_ = false;
+    idlePose_ = false; // 새 답변은 대기 중 호기심 표정보다 우선한다.
+    lastIdlePoseAt_ = millis();
+    idlePoseInterval_ = random(12000, 20001);
     eyes_.setWidth(EYE_WIDTH, EYE_WIDTH);
     eyes_.setHeight(EYE_HEIGHT, EYE_HEIGHT);
     eyes_.setBorderradius(EYE_RADIUS, EYE_RADIUS);
@@ -138,7 +145,7 @@ class DeskBuddyEyes {
       eyes_.setWidth(36, 36);
       eyes_.setHeight(34, 34);
       eyes_.setBorderradius(15, 15); // 놀랐을 때 크고 둥근 눈.
-    } else name = "neutral";
+    } else { name = "neutral"; neutral_ = true; }
     eyes_.setPosition(DEFAULT);     // 새 답변을 받을 때 우선 정면을 본다.
     lastGazeAt_ = millis();
     gazeInterval_ = 2200;
@@ -146,13 +153,38 @@ class DeskBuddyEyes {
   }
 
   // 반환값은 새 프레임 유무. 눈과 글씨는 같은 메인 루프에서 동시에 진행한다.
-  bool update(uint32_t now) {
+  bool update(uint32_t now, bool answerPlaying = false) {
     if (now - lastGazeAt_ >= gazeInterval_) {
-      static const uint8_t directions[] = {W, DEFAULT, E, DEFAULT};
-      eyes_.setPosition(directions[gazeStep_]);
-      gazeStep_ = (gazeStep_ + 1) % 4;
+      eyes_.setPosition(DEFAULT);
+      if (nextLookAway_) {
+        // 과도한 상하 이동 대신 좌우, 약간 위, 대각선, 약간 아래를 섞는다.
+        static const int8_t offsets[][2] = {{-18,0},{18,0},{0,-4},{-12,-3},{12,-3},{0,2}};
+        const uint8_t count = sizeof(offsets) / sizeof(offsets[0]);
+        // 같은 방향이 연달아 뽑히지 않도록 이전 방향을 제외한다.
+        uint8_t choice = random(count - 1);
+        if (lastLook_ >= 0 && choice >= lastLook_) ++choice;
+        lastLook_ = choice;
+        eyes_.eyeLxNext = max(0, min(eyes_.getScreenConstraint_X(), eyes_.eyeLxNext + offsets[choice][0]));
+        eyes_.eyeLyNext = max(0, min(eyes_.getScreenConstraint_Y(), eyes_.eyeLyNext + offsets[choice][1]));
+        gazeInterval_ = random(1600, 2701);
+      } else {
+        gazeInterval_ = random(2200, 4001); // 둘러본 뒤에는 정면에서 조금 쉬어 자연스럽게 보이게 한다.
+      }
+      nextLookAway_ = !nextLookAway_;
       lastGazeAt_ = now;
-      gazeInterval_ = random(1600, 3301); // 시선 순서는 지키되 머무는 시간은 자연스럽게 달리한다.
+    }
+    // 답변 재생 중에는 서버 감정을 유지한다. 대기 중 기본 얼굴에서만 가끔 호기심을 보인다.
+    if (idlePose_ && (answerPlaying || now - idlePoseStartedAt_ >= IDLE_POSE_DURATION_MS)) {
+      eyes_.setHeight(EYE_HEIGHT, EYE_HEIGHT);
+      idlePose_ = false;
+      lastIdlePoseAt_ = now;
+      idlePoseInterval_ = random(12000, 20001);
+    }
+    if (neutral_ && !answerPlaying && !idlePose_ && now - lastIdlePoseAt_ >= idlePoseInterval_) {
+      const bool left = random(2) == 0;
+      eyes_.setHeight(left ? EYE_HEIGHT + 3 : EYE_HEIGHT - 2, left ? EYE_HEIGHT - 2 : EYE_HEIGHT + 3);
+      idlePose_ = true;
+      idlePoseStartedAt_ = now;
     }
     eyes_.update();
     return canvas_.takeDirty();
@@ -162,7 +194,13 @@ class DeskBuddyEyes {
   RoboEyesCanvas canvas_;           // U8g2와 RoboEyes 사이의 연결 객체.
   RoboEyes<RoboEyesCanvas> eyes_;    // 원본 RoboEyes의 깜빡임/눈꺼풀/보간 애니메이션 상태.
   const uint8_t height_;            // 위쪽 표정 영역의 높이.
-  uint8_t gazeStep_ = 0;            // 다음 시선: 왼쪽→중앙→오른쪽→중앙.
+  bool nextLookAway_ = true;       // 둘러보기와 정면에서 쉬기를 번갈아 실행한다.
+  int8_t lastLook_ = -1;           // 같은 시선을 연달아 선택하지 않기 위한 이전 방향.
   uint32_t lastGazeAt_ = 0;         // 마지막 시선 변경 시각(ms).
   uint32_t gazeInterval_ = 2200;    // 다음 시선 변경까지 기다리는 시간(ms).
+  bool neutral_ = true;            // 서버의 기본 표정인지 여부. 감정 표정은 대기 연출로 덮지 않는다.
+  bool idlePose_ = false;          // 한쪽 눈을 살짝 키운 호기심 표정을 유지하는 중인지 여부.
+  uint32_t idlePoseStartedAt_ = 0; // 호기심 표정 시작 시각(ms).
+  uint32_t lastIdlePoseAt_ = 0;    // 마지막 호기심 표정을 끝낸 시각(ms).
+  uint32_t idlePoseInterval_ = 14000; // 대기 중 12~20초마다 짧은 호기심 표정을 보여준다.
 };
