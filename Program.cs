@@ -21,6 +21,7 @@ builder.Services.Configure<DeskBuddyOptions>(builder.Configuration.GetSection("D
 builder.Services.AddHttpClient<GeminiClient>(client => client.Timeout = Timeout.InfiniteTimeSpan);
 builder.Services.AddScoped<DeskBuddyService>();
 builder.Services.AddSingleton<DeskBuddyDeviceConnections>();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("deskbuddy", limiter =>

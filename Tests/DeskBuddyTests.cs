@@ -203,6 +203,49 @@ public sealed class DeskBuddyTests
         Assert.Equal("basic", searchRequest.RootElement.GetProperty("search_depth").GetString());
         Assert.False(searchRequest.RootElement.GetProperty("auto_parameters").GetBoolean());
         Assert.Equal(3, searchRequest.RootElement.GetProperty("max_results").GetInt32());
+        Assert.Equal("south korea", searchRequest.RootElement.GetProperty("country").GetString());
+        Assert.Equal("ko", searchRequest.RootElement.GetProperty("language").GetString());
+        Assert.Equal("general", searchRequest.RootElement.GetProperty("topic").GetString());
+        Assert.Contains("2026-10-20 21:00:00 +09:00", searchRequest.RootElement.GetProperty("query").GetString());
+        var instructions = finalRequest.RootElement.GetProperty("systemInstruction").GetProperty("parts")[0].GetProperty("text").GetString();
+        Assert.Contains("대한민국", instructions);
+        Assert.Contains("Asia/Seoul", instructions);
+        Assert.Contains("2026-10-20 21:00:00 +09:00", instructions);
+    }
+
+    [Fact]
+    public async Task HistoricalSearch_PreservesTargetDateAndDoesNotFilterToToday()
+    {
+        using var app = new TestApi();
+        app.ProviderBodies.Enqueue(ProviderAnswer(searchQuery: "대한민국 인천 2025-01-01 날씨"));
+        app.ProviderBodies.Enqueue(ProviderAnswer(reply: "해당 날짜 자료를 확인했어."));
+        using var client = app.CreateDeviceClient();
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "2025년 1월 1일 인천 날씨 검색해줘" })).StatusCode);
+        using var request = JsonDocument.Parse(app.SearchBody!);
+        Assert.Contains("2025-01-01", request.RootElement.GetProperty("query").GetString());
+        Assert.Contains("2026-10-20 21:00:00 +09:00", request.RootElement.GetProperty("query").GetString());
+        Assert.False(request.RootElement.TryGetProperty("time_range", out _));
+        Assert.False(request.RootElement.TryGetProperty("start_date", out _));
+        Assert.False(request.RootElement.TryGetProperty("end_date", out _));
+    }
+
+    [Fact]
+    public async Task KoreanMidnight_SeparatesRelativeDateSearchCache()
+    {
+        using var app = new TestApi();
+        app.Clock.UtcNow = DateTimeOffset.Parse("2026-10-20T14:59:59Z");
+        for (var i = 0; i < 2; i++)
+        {
+            app.ProviderBodies.Enqueue(ProviderAnswer(searchQuery: "대한민국 인천 오늘 날씨"));
+            app.ProviderBodies.Enqueue(ProviderAnswer());
+        }
+        using var client = app.CreateDeviceClient();
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "오늘 인천 날씨?" })).StatusCode);
+        app.Clock.UtcNow = app.Clock.UtcNow.AddSeconds(2);
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "오늘 인천 날씨?" })).StatusCode);
+        Assert.Equal(2, app.SearchCalls);
+        using var request = JsonDocument.Parse(app.SearchBody!);
+        Assert.Contains("2026-10-21 00:00:01 +09:00", request.RootElement.GetProperty("query").GetString());
     }
 
     [Fact]
@@ -370,6 +413,7 @@ public sealed class DeskBuddyTests
 
     private sealed class TestApi(string? missingSetting = null) : WebApplicationFactory<Program>
     {
+        public MutableClock Clock { get; } = new();
         public string ProviderBody { get; set; } = ProviderAnswer();
         public HttpStatusCode ProviderStatus { get; set; } = HttpStatusCode.OK;
         public bool SimulateTimeout { get; set; }
@@ -405,6 +449,7 @@ public sealed class DeskBuddyTests
             }));
             builder.ConfigureServices(services =>
             {
+                services.AddSingleton<TimeProvider>(Clock);
                 services.AddHttpClient<GeminiClient>().ConfigurePrimaryHttpMessageHandler(() => new FakeHandler(this));
                 services.AddHttpClient<TavilyClient>().ConfigurePrimaryHttpMessageHandler(() => new FakeSearchHandler(this));
             });
@@ -438,5 +483,11 @@ public sealed class DeskBuddyTests
                 return new HttpResponseMessage(app.SearchStatus) { Content = new StringContent(app.SearchResponse, Encoding.UTF8, "application/json") };
             }
         }
+    }
+
+    private sealed class MutableClock : TimeProvider
+    {
+        public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.Parse("2026-10-20T12:00:00Z");
+        public override DateTimeOffset GetUtcNow() => UtcNow;
     }
 }

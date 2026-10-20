@@ -60,7 +60,7 @@
   └─ 검색 필요 → Tavily basic 검색 → Gemini가 근거를 읽고 답변 (Gemini 2회, Tavily 최대 1회)
 ```
 
-한국 날짜와 시간을 함께 전달합니다. 인사·잡담·일반 지식은 검색하지 않고, 오늘 날씨·최신 뉴스·현재 가격이나 명시적 검색 요청에는 검색하도록 지시합니다. 모델의 판단이므로 불필요한 검색이 완전히 배제되지는 않습니다. 같은 검색어의 성공 결과는 컨테이너 메모리에 5분간 보관해 재사용합니다. 한 요청에서 추가 검색을 반복하지 않으며, Tavily `auto_parameters=false`, `search_depth=basic`, `max_results=3`으로 호출합니다.
+기본 국가/지역은 **대한민국**, 시간대는 **Asia/Seoul(KST, UTC+09:00)**입니다. 지역/시간대를 따로 명시하지 않은 질문과 오늘·어제·내일 등 상대 날짜는 이 기준으로 해석합니다. 사용자가 지정한 다른 지역/시간대나 과거·미래 날짜는 유지합니다. 도시가 필요한데 빠져 있으면 임의로 추정하지 않고 확인합니다. Gemini의 판단과 최종 답변에 같은 한국 기준 시각을 전달하며, Tavily에도 `topic=general`, `country=south korea`, `language=ko` 및 검색어의 문맥으로 기준 한국 시각을 보냅니다. 국가/언어는 우선순위 설정이며 국내 사이트만 강제하는 필터는 아닙니다. 검색 기준 시각은 질문 대상 날짜나 관측 시각과 구분하고, 과거 검색을 막지 않도록 날짜 필터를 오늘로 고정하지 않습니다. 인사·잡담·일반 지식은 검색하지 않고, 오늘 날씨·최신 뉴스·현재 가격이나 명시적 검색 요청에는 검색하도록 지시합니다. 모델의 판단이므로 불필요한 검색이 완전히 배제되지는 않습니다. 같은 검색어의 성공 결과는 컨테이너 메모리에 5분간 보관해 재사용하되 한국 날짜가 바뀌면 캐시를 분리합니다. 한 요청에서 추가 검색을 반복하지 않으며, Tavily `auto_parameters=false`, `search_depth=basic`, `max_results=3`으로 호출합니다.
 
 `searchUsed=true`는 검색 경로를 사용했다는 뜻이며 캐시 적중도 포함합니다. `sources`는 모델이 만든 URL이 아니라 실제 검색 결과의 제목·URL 목록입니다. 답변 문장별 인용 매핑은 제공하지 않습니다. 검색 결과가 없으면 확인하지 못했다고 답하고, 제공자 오류나 한도 초과는 오류 응답을 반환합니다. 날짜·장소가 다른 자료로 현재 수치를 추측하지 않도록 지시하지만, 일반 웹 검색은 기상 관측 전용 API처럼 실시간 날씨의 정확성을 보장하지 않습니다.
 
@@ -171,7 +171,7 @@ cd C:\workspace_silee\home-server
 docker compose up -d --no-deps --pull never --force-recreate seinservices-api
 ```
 
-화면 연동 운영 이미지는 `silee98/seinservices-api:deskbuddy-display-20261020`이며 Docker Hub에서 내려받을 수 있습니다. `main` 브랜치의 GitHub Actions는 별도로 `latest`와 commit SHA 태그를 게시합니다. `deskbuddy.env`의 비밀 값은 소스에 복사하지 마세요. 검색 연동 이전 이미지 `silee98/seinservices-api:deskbuddy-20261020`도 로컬에 유지됩니다.
+한국 지역·시간 기본값을 반영한 운영 이미지는 `silee98/seinservices-api:deskbuddy-korea-20261020`이며 Docker Hub에서 내려받을 수 있습니다. `main` 브랜치의 GitHub Actions는 별도로 `latest`와 commit SHA 태그를 게시합니다. `deskbuddy.env`의 비밀 값은 소스에 복사하지 마세요. 검색 연동 이전 이미지 `silee98/seinservices-api:deskbuddy-20261020`도 로컬에 유지됩니다.
 
 #### 검증
 

@@ -48,6 +48,7 @@ namespace SeinServices.Api.Swagger
                     operation.Summary = "책상 친구에게 질문하기 (필요 시 웹 검색)";
                     operation.Description += " Gemini가 먼저 검색 필요 여부를 판단하고 필요한 경우에만 Tavily 기본 검색을 최대 1회 호출한 뒤 결과로 답합니다. 예: 오늘 인천 날씨 어때~? searchUsed는 검색 경로 사용 여부(5분 캐시 적중 포함), sources는 검색에서 찾은 출처 목록입니다. 검색이 필요 없으면 false와 빈 목록입니다. 검색 결과가 부족하면 확인하지 못했다고 답합니다. Tavily 키 누락은 503, 검색 한도 초과는 429입니다.";
                     operation.Description += " 답변 생성에 성공하면 같은 장치 키를 사용하는 연결된 OLED 장치에도 WebSocket으로 답변을 전달합니다. 장치가 오프라인이어도 HTTP 응답은 정상 반환되며, 화면 수신 확인을 기다리지는 않습니다.";
+                    operation.Description += " 기본 지역은 대한민국, 시간대는 Asia/Seoul(KST, UTC+09:00)입니다. 상대 날짜는 한국 시각으로 해석하고 지정한 과거/미래 날짜는 유지합니다. Tavily에 country=south korea, language=ko와 검색 기준 한국 시각을 함께 보냅니다. 한국 자료를 우선하며 한국 사이트만으로 제한하지는 않습니다. 별도 시간/지역 요청 파라미터는 필요 없습니다.";
                 }
             }
 

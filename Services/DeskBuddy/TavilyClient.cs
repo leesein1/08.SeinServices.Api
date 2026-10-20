@@ -11,12 +11,14 @@ public sealed record WebSearchResult(DateTimeOffset RetrievedAt, IReadOnlyList<S
 
 public sealed class TavilyClient(HttpClient httpClient, IOptions<TavilyOptions> options, IMemoryCache cache)
 {
-    public async Task<WebSearchResult> SearchAsync(string query, CancellationToken cancellationToken)
+    public async Task<WebSearchResult> SearchAsync(string query, DateTimeOffset referenceTime, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(options.Value.ApiKey))
             throw new DeskBuddyException(503, "TAVILY_NOT_CONFIGURED", "서버에 Tavily 검색 API 키를 설정해주세요.");
 
-        var cacheKey = ("deskbuddy-search", query);
+        var koreaTime = referenceTime.ToOffset(TimeSpan.FromHours(9));
+        // 초 단위 기준 시각이 바뀌어도 5분 캐시를 재사용하되, 한국 자정에는 이전 날짜와 분리한다.
+        var cacheKey = ("deskbuddy-search-kr", DateOnly.FromDateTime(koreaTime.DateTime), query);
         if (cache.TryGetValue<WebSearchResult>(cacheKey, out var cached) && cached != null)
             return cached;
 
@@ -26,7 +28,11 @@ public sealed class TavilyClient(HttpClient httpClient, IOptions<TavilyOptions> 
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.Value.ApiKey);
         request.Content = JsonContent.Create(new
         {
-            query, search_depth = "basic", max_results = 3,
+            // Tavily에는 별도의 현재 시각 필드가 없어 검색어의 참고 문맥으로 전달한다.
+            // 대상 날짜가 과거/미래일 수 있으므로 time_range/start_date를 오늘로 고정하지 않는다.
+            query = $"{query}\n검색 기준: 대한민국, 현재 한국 시각 {koreaTime:yyyy-MM-dd HH:mm:ss zzz} (KST). 검색어에 명시된 대상 날짜와 기간을 유지.",
+            topic = "general", country = "south korea", language = "ko",
+            search_depth = "basic", max_results = 3,
             include_answer = false, include_raw_content = false, auto_parameters = false
         });
         try
