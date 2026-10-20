@@ -153,7 +153,8 @@ void setup() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   // Certificate validation needs a correct clock. Never disable TLS verification.
   configTime(0, 0, "time.google.com", "pool.ntp.org", "time.cloudflare.com");
-  snprintf(authHeader, sizeof(authHeader), "X-Device-Key: %s\r\n", DEVICE_API_KEY);
+  // The WebSockets library appends CRLF itself; an extra blank line corrupts the first frame.
+  snprintf(authHeader, sizeof(authHeader), "X-Device-Key: %s", DEVICE_API_KEY);
   socketClient.onEvent(receiveEvent);
   socketClient.setReconnectInterval(5000);
   socketClient.enableHeartbeat(20000, 5000, 2);
