@@ -42,6 +42,11 @@ namespace SeinServices.Api.Swagger
             {
                 operation.Summary = description.Summary;
                 operation.Description = description.Description;
+                if (method == "POST" && path == "api/deskbuddy/chat")
+                {
+                    operation.Summary = "책상 친구에게 질문하기 (필요 시 웹 검색)";
+                    operation.Description += " Gemini가 먼저 검색 필요 여부를 판단하고 필요한 경우에만 Tavily 기본 검색을 최대 1회 호출한 뒤 결과로 답합니다. 예: 오늘 인천 날씨 어때~? searchUsed는 검색 경로 사용 여부(5분 캐시 적중 포함), sources는 검색에서 찾은 출처 목록입니다. 검색이 필요 없으면 false와 빈 목록입니다. 검색 결과가 부족하면 확인하지 못했다고 답합니다. Tavily 키 누락은 503, 검색 한도 초과는 429입니다.";
+                }
             }
 
             if (method == "POST" && path == "api/deskbuddy/chat")
@@ -59,7 +64,9 @@ namespace SeinServices.Api.Swagger
                     responseMedia.Example = new OpenApiObject
                     {
                         ["reply"] = new OpenApiString("오늘 많이 힘들었구나. 잠깐 쉬면서 이야기하자!"),
-                        ["emotion"] = new OpenApiString("sad")
+                        ["emotion"] = new OpenApiString("sad"),
+                        ["searchUsed"] = new OpenApiBoolean(false),
+                        ["sources"] = new OpenApiArray()
                     };
             }
 

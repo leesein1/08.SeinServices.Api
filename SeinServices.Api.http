@@ -7,7 +7,7 @@ Content-Type: application/json
 X-Device-Key: {{DeskBuddyDeviceKey}}
 
 {
-  "message": "안녕! 오늘은 무엇을 하고 놀까?"
+  "message": "오늘 인천 날씨 어때~?"
 }
 
 ###

@@ -14,6 +14,9 @@ builder.Services.AddControllers(options =>
 });
 builder.Services.AddHttpClient();
 builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection("Gemini"));
+builder.Services.Configure<TavilyOptions>(builder.Configuration.GetSection("Tavily"));
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<TavilyClient>(client => client.Timeout = Timeout.InfiniteTimeSpan);
 builder.Services.Configure<DeskBuddyOptions>(builder.Configuration.GetSection("DeskBuddy"));
 builder.Services.AddHttpClient<GeminiClient>(client => client.Timeout = Timeout.InfiniteTimeSpan);
 builder.Services.AddScoped<DeskBuddyService>();
@@ -114,7 +117,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "SeinServices API - DeskBuddy",
         Version = "v1",
-        Description = "ESP32 책상 친구의 텍스트 대화 API입니다. Gemini를 호출해 대사와 표정을 반환합니다. X-Device-Key 헤더가 필요하며, 현재는 대화 기억·음성·실제 기기 제어를 포함하지 않습니다."
+        Description = "ESP32 책상 친구의 텍스트 대화 API입니다. Gemini가 검색 필요 여부를 판단하고 필요한 경우 Tavily 검색 후 대사·표정·출처를 반환합니다. X-Device-Key 헤더가 필요하며, 현재는 대화 기억·음성·실제 기기 제어를 포함하지 않습니다."
     });
     options.TagActionsBy(apiDescription => new[] { apiDescription.GroupName switch
     {

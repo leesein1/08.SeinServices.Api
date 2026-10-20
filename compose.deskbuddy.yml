@@ -12,6 +12,8 @@ services:
       Gemini__ApiKey: ${Gemini__ApiKey:-}
       Gemini__Model: ${Gemini__Model:-gemini-3.5-flash-lite}
       Gemini__TimeoutSeconds: ${Gemini__TimeoutSeconds:-30}
+      Tavily__ApiKey: ${Tavily__ApiKey:-}
+      Tavily__TimeoutSeconds: ${Tavily__TimeoutSeconds:-15}
       DeskBuddy__DeviceApiKey: ${DeskBuddy__DeviceApiKey:-}
       DeskBuddy__CharacterName: ${DeskBuddy__CharacterName:-데스크버디}
       DeskBuddy__Personality: ${DeskBuddy__Personality:-호기심 많고 다정한 책상 친구. 친근한 반말을 사용한다.}

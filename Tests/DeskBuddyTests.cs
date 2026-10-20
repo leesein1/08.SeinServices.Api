@@ -13,9 +13,9 @@ namespace SeinServices.Api.Tests;
 
 public sealed class DeskBuddyTests
 {
-    private static string ProviderAnswer(string reply = "안녕!", string emotion = "happy", string finish = "STOP") =>
+    private static string ProviderAnswer(string reply = "안녕!", string emotion = "happy", string finish = "STOP", string searchQuery = "") =>
         JsonSerializer.Serialize(new { candidates = new[] { new { finishReason = finish,
-            content = new { parts = new[] { new { text = JsonSerializer.Serialize(new { reply, emotion }) } } } } } });
+            content = new { parts = new[] { new { text = JsonSerializer.Serialize(new { reply, emotion, searchQuery }) } } } } } });
 
     [Fact]
     public async Task Success_UsesStructuredOutputAndReturnsSmallDeviceContract()
@@ -27,7 +27,9 @@ public sealed class DeskBuddyTests
         using var result = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("안녕!", result.RootElement.GetProperty("reply").GetString());
         Assert.Equal("happy", result.RootElement.GetProperty("emotion").GetString());
-        Assert.Equal(2, result.RootElement.EnumerateObject().Count());
+        Assert.False(result.RootElement.GetProperty("searchUsed").GetBoolean());
+        Assert.Empty(result.RootElement.GetProperty("sources").EnumerateArray());
+        Assert.Equal(0, app.SearchCalls);
         using var sent = JsonDocument.Parse(app.OutgoingBody!);
         Assert.Equal("안녕", sent.RootElement.GetProperty("contents")[0].GetProperty("parts")[0].GetProperty("text").GetString());
         Assert.Equal("application/json", sent.RootElement.GetProperty("generationConfig").GetProperty("responseMimeType").GetString());
@@ -35,6 +37,7 @@ public sealed class DeskBuddyTests
         Assert.Contains("responseSchema", app.OutgoingBody!);
         Assert.DoesNotContain("key", app.OutgoingUri!.Query);
         Assert.Equal("test-gemini-key", app.OutgoingKey);
+        Assert.Contains("gemini-3.5-flash-lite", app.OutgoingUri.AbsolutePath);
     }
 
     [Theory]
@@ -115,12 +118,13 @@ public sealed class DeskBuddyTests
     [InlineData(429, "GEMINI_RATE_LIMITED")]
     [InlineData(403, "GEMINI_AUTH_FAILED")]
     [InlineData(500, "GEMINI_REQUEST_FAILED")]
+    [InlineData(402, "GEMINI_BILLING_REQUIRED")]
     public async Task ProviderFailure_DoesNotExposeProviderBody(int status, string code)
     {
         using var app = new TestApi { ProviderStatus = (HttpStatusCode)status, ProviderBody = "secret-provider-body" };
         using var client = app.CreateDeviceClient();
         var response = await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "안녕" });
-        Assert.Equal(status == 429 ? 429 : 502, (int)response.StatusCode);
+        Assert.Equal(status == 429 ? 429 : status == 402 ? 503 : 502, (int)response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains(code, body);
         Assert.DoesNotContain("secret-provider-body", body);
@@ -173,6 +177,125 @@ public sealed class DeskBuddyTests
         Assert.Contains("DESKBUDDY_RATE_LIMITED", await rejected.Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task Search_RoutesGeminiThenTavilyThenGeminiAndReturnsActualSources()
+    {
+        using var app = new TestApi();
+        app.ProviderBodies.Enqueue(ProviderAnswer(searchQuery: "인천 오늘 날씨"));
+        app.ProviderBodies.Enqueue(ProviderAnswer(reply: "검색 자료에서 인천 날씨를 확인했어."));
+        using var client = app.CreateDeviceClient();
+        var response = await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "오늘 인천 날씨 어때?" });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(new[] { "gemini", "tavily", "gemini" }, app.CallOrder);
+        using var result = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(result.RootElement.GetProperty("searchUsed").GetBoolean());
+        Assert.Equal("https://weather.example.com", result.RootElement.GetProperty("sources")[0].GetProperty("url").GetString());
+        Assert.Contains("searchEvidence", app.OutgoingBody!);
+        Assert.Contains("weather.example.com", app.OutgoingBody!);
+        using var finalRequest = JsonDocument.Parse(app.OutgoingBody!);
+        Assert.False(finalRequest.RootElement.GetProperty("generationConfig").GetProperty("responseSchema")
+            .GetProperty("properties").TryGetProperty("searchQuery", out _));
+        using var searchRequest = JsonDocument.Parse(app.SearchBody!);
+        Assert.Equal("basic", searchRequest.RootElement.GetProperty("search_depth").GetString());
+        Assert.False(searchRequest.RootElement.GetProperty("auto_parameters").GetBoolean());
+        Assert.Equal(3, searchRequest.RootElement.GetProperty("max_results").GetInt32());
+    }
+
+    [Fact]
+    public async Task RepeatedQuery_UsesCacheAndStillAnswersWithGemini()
+    {
+        using var app = new TestApi();
+        for (var i = 0; i < 2; i++)
+        {
+            app.ProviderBodies.Enqueue(ProviderAnswer(searchQuery: "인천 날씨"));
+            app.ProviderBodies.Enqueue(ProviderAnswer());
+        }
+        using var client = app.CreateDeviceClient();
+        for (var i = 0; i < 2; i++)
+            Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "인천 날씨?" })).StatusCode);
+        Assert.Equal(1, app.SearchCalls);
+        Assert.Equal(4, app.Calls);
+    }
+
+    [Theory]
+    [InlineData(401, 502, "TAVILY_AUTH_FAILED")]
+    [InlineData(432, 429, "TAVILY_RATE_LIMITED")]
+    [InlineData(433, 429, "TAVILY_RATE_LIMITED")]
+    [InlineData(500, 502, "TAVILY_REQUEST_FAILED")]
+    public async Task SearchFailure_IsExplicitAndDoesNotGenerateMadeUpAnswer(int providerStatus, int expectedStatus, string code)
+    {
+        using var app = new TestApi { ProviderBody = ProviderAnswer(searchQuery: "인천 날씨"), SearchStatus = (HttpStatusCode)providerStatus,
+            SearchResponse = "secret-search-provider-body" };
+        using var client = app.CreateDeviceClient();
+        var response = await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "인천 날씨?" });
+        Assert.Equal(expectedStatus, (int)response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains(code, body);
+        Assert.DoesNotContain("secret-search-provider-body", body);
+        Assert.Equal(1, app.Calls);
+    }
+
+    [Fact]
+    public async Task MissingSearchKey_OnlySearchRequestsFail()
+    {
+        using var app = new TestApi("Tavily:ApiKey");
+        using var client = app.CreateDeviceClient();
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "안녕" })).StatusCode);
+        app.ProviderBody = ProviderAnswer(searchQuery: "인천 날씨");
+        var response = await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "인천 날씨?" });
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Contains("TAVILY_NOT_CONFIGURED", await response.Content.ReadAsStringAsync());
+        Assert.Equal(0, app.SearchCalls);
+    }
+
+    [Theory]
+    [InlineData("{\"results\":[]}")]
+    [InlineData("{\"results\":[{\"title\":\"bad\",\"url\":\"javascript:alert(1)\",\"content\":\"bad\"}]}")]
+    public async Task EmptyOrUnsafeResults_DoNotProduceUnverifiedFacts(string searchResponse)
+    {
+        using var app = new TestApi { ProviderBody = ProviderAnswer(searchQuery: "인천 날씨"), SearchResponse = searchResponse };
+        using var client = app.CreateDeviceClient();
+        var response = await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "인천 날씨?" });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, app.Calls);
+        using var result = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(result.RootElement.GetProperty("searchUsed").GetBoolean());
+        Assert.Empty(result.RootElement.GetProperty("sources").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task InvalidSearchResponse_ReturnsBadGateway()
+    {
+        using var app = new TestApi { ProviderBody = ProviderAnswer(searchQuery: "인천 날씨"), SearchResponse = "not-json" };
+        using var client = app.CreateDeviceClient();
+        var response = await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "인천 날씨?" });
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        Assert.Contains("TAVILY_INVALID_RESPONSE", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task ExcessiveSearchQuery_IsRejectedBeforeSearch()
+    {
+        using var app = new TestApi { ProviderBody = ProviderAnswer(searchQuery: new string('a', 301)) };
+        using var client = app.CreateDeviceClient();
+        var response = await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "검색해줘" });
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        Assert.Equal(0, app.SearchCalls);
+    }
+
+    [Fact]
+    public async Task SecondGeminiFailure_DoesNotReturnPreSearchDraft()
+    {
+        using var app = new TestApi();
+        app.ProviderBodies.Enqueue(ProviderAnswer(reply: "아직 확인 안 한 정보", searchQuery: "인천 날씨"));
+        app.ProviderBodies.Enqueue("not-json");
+        using var client = app.CreateDeviceClient();
+        var response = await client.PostAsJsonAsync("/api/deskbuddy/chat", new { message = "인천 날씨?" });
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        Assert.Equal(1, app.SearchCalls);
+        Assert.Contains("GEMINI_INVALID_RESPONSE", await response.Content.ReadAsStringAsync());
+    }
+
     private sealed class TestApi(string? missingSetting = null) : WebApplicationFactory<Program>
     {
         public string ProviderBody { get; set; } = ProviderAnswer();
@@ -182,6 +305,12 @@ public sealed class DeskBuddyTests
         public string? OutgoingBody { get; private set; }
         public Uri? OutgoingUri { get; private set; }
         public string? OutgoingKey { get; private set; }
+        public Queue<string> ProviderBodies { get; } = new();
+        public List<string> CallOrder { get; } = [];
+        public int SearchCalls { get; private set; }
+        public string? SearchBody { get; private set; }
+        public HttpStatusCode SearchStatus { get; set; } = HttpStatusCode.OK;
+        public string SearchResponse { get; set; } = """{"results":[{"title":"날씨 자료","url":"https://weather.example.com","content":"인천의 날짜별 날씨 자료"}]}""";
 
         public HttpClient CreateDeviceClient()
         {
@@ -196,13 +325,17 @@ public sealed class DeskBuddyTests
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Gemini:ApiKey"] = missingSetting == "Gemini:ApiKey" ? "" : "test-gemini-key",
+                ["Tavily:ApiKey"] = missingSetting == "Tavily:ApiKey" ? "" : "test-tavily-key",
                 ["DeskBuddy:DeviceApiKey"] = missingSetting == "DeskBuddy:DeviceApiKey" ? "" : "test-device-key",
                 ["DeskBuddy:CharacterName"] = "테스트친구",
                 ["Schedulers:EnableInProcess"] = "false",
                 ["FaultMon:EnableSignalRScheduler"] = "false"
             }));
-            builder.ConfigureServices(services => services.AddHttpClient<GeminiClient>()
-                .ConfigurePrimaryHttpMessageHandler(() => new FakeHandler(this)));
+            builder.ConfigureServices(services =>
+            {
+                services.AddHttpClient<GeminiClient>().ConfigurePrimaryHttpMessageHandler(() => new FakeHandler(this));
+                services.AddHttpClient<TavilyClient>().ConfigurePrimaryHttpMessageHandler(() => new FakeSearchHandler(this));
+            });
         }
 
         private sealed class FakeHandler(TestApi app) : HttpMessageHandler
@@ -210,14 +343,27 @@ public sealed class DeskBuddyTests
             protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
                 app.Calls++;
+                app.CallOrder.Add("gemini");
                 app.OutgoingBody = await request.Content!.ReadAsStringAsync(cancellationToken);
                 app.OutgoingUri = request.RequestUri;
                 app.OutgoingKey = request.Headers.GetValues("x-goog-api-key").Single();
                 if (app.SimulateTimeout) throw new TaskCanceledException("Simulated provider timeout");
                 return new HttpResponseMessage(app.ProviderStatus)
                 {
-                    Content = new StringContent(app.ProviderBody, Encoding.UTF8, "application/json")
+                    Content = new StringContent(app.ProviderBodies.Count > 0 ? app.ProviderBodies.Dequeue() : app.ProviderBody, Encoding.UTF8, "application/json")
                 };
+            }
+        }
+
+        private sealed class FakeSearchHandler(TestApi app) : HttpMessageHandler
+        {
+            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                app.SearchCalls++;
+                app.CallOrder.Add("tavily");
+                Assert.Equal("test-tavily-key", request.Headers.Authorization?.Parameter);
+                app.SearchBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+                return new HttpResponseMessage(app.SearchStatus) { Content = new StringContent(app.SearchResponse, Encoding.UTF8, "application/json") };
             }
         }
     }

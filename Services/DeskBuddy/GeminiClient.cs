@@ -6,9 +6,11 @@ using SeinServices.Api.Models.DeskBuddy.Responses;
 
 namespace SeinServices.Api.Services.DeskBuddy;
 
+public sealed record GeminiDecision(ChatResponseDto Answer, string? SearchQuery);
+
 public sealed class GeminiClient(HttpClient httpClient, IOptions<GeminiOptions> options)
 {
-    public async Task<ChatResponseDto> GenerateAsync(string message, string instruction, CancellationToken cancellationToken)
+    public async Task<GeminiDecision> GenerateAsync(string message, string instruction, CancellationToken cancellationToken, bool allowSearch = false)
     {
         var settings = options.Value;
         if (string.IsNullOrWhiteSpace(settings.ApiKey))
@@ -22,6 +24,14 @@ public sealed class GeminiClient(HttpClient httpClient, IOptions<GeminiOptions> 
             throw new DeskBuddyException(503, "GEMINI_MODEL_INVALID", "서버의 Gemini 모델 설정을 확인해주세요.");
         }
 
+        var properties = new Dictionary<string, object>
+        {
+            ["reply"] = new { type = "STRING", description = "한국어로 된 짧은 대답. 최대 600자." },
+            ["emotion"] = new { type = "STRING", @enum = new[] { "neutral", "happy", "sad", "angry", "surprised" } }
+        };
+        if (allowSearch)
+            properties["searchQuery"] = new { type = "STRING", description = "최신 외부 정보가 필요하면 검색어(최대 300자), 검색이 필요 없으면 빈 문자열." };
+
         var payload = new
         {
             systemInstruction = new { parts = new[] { new { text = instruction } } },
@@ -33,12 +43,8 @@ public sealed class GeminiClient(HttpClient httpClient, IOptions<GeminiOptions> 
                 responseSchema = new
                 {
                     type = "OBJECT",
-                    properties = new Dictionary<string, object>
-                    {
-                        ["reply"] = new { type = "STRING", description = "한국어로 된 짧은 대답. 최대 600자." },
-                        ["emotion"] = new { type = "STRING", @enum = new[] { "neutral", "happy", "sad", "angry", "surprised" } }
-                    },
-                    required = new[] { "reply", "emotion" }
+                    properties,
+                    required = allowSearch ? new[] { "reply", "emotion", "searchQuery" } : new[] { "reply", "emotion" }
                 }
             }
         };
@@ -58,6 +64,7 @@ public sealed class GeminiClient(HttpClient httpClient, IOptions<GeminiOptions> 
                 // Do not return provider response bodies or credentials to callers.
                 throw response.StatusCode switch
                 {
+                    HttpStatusCode.PaymentRequired => new DeskBuddyException(503, "GEMINI_BILLING_REQUIRED", "Gemini 프로젝트의 결제 상태 또는 선불 잔액을 확인해주세요. 무료 사용은 프로젝트의 무료 티어 설정을 확인해주세요."),
                     HttpStatusCode.TooManyRequests => new DeskBuddyException(429, "GEMINI_RATE_LIMITED", "Gemini 사용량 한도에 도달했습니다. 잠시 후 다시 시도해주세요."),
                     HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => new DeskBuddyException(502, "GEMINI_AUTH_FAILED", "서버의 Gemini API 키와 접근 권한을 확인해주세요."),
                     _ => new DeskBuddyException(502, "GEMINI_REQUEST_FAILED", "Gemini 요청에 실패했습니다. 서버의 모델 설정 또는 제공자 상태를 확인해주세요.")
@@ -66,7 +73,7 @@ public sealed class GeminiClient(HttpClient httpClient, IOptions<GeminiOptions> 
 
             await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: timeout.Token);
-            return ParseResponse(document.RootElement);
+            return ParseResponse(document.RootElement, allowSearch);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -82,7 +89,7 @@ public sealed class GeminiClient(HttpClient httpClient, IOptions<GeminiOptions> 
         }
     }
 
-    private static ChatResponseDto ParseResponse(JsonElement root)
+    private static GeminiDecision ParseResponse(JsonElement root, bool allowSearch)
     {
         if (root.ValueKind != JsonValueKind.Object)
             throw InvalidResponse();
@@ -134,7 +141,15 @@ public sealed class GeminiClient(HttpClient httpClient, IOptions<GeminiOptions> 
         if (emotion is not ("neutral" or "happy" or "sad" or "angry" or "surprised"))
             emotion = "neutral";
 
-        return new ChatResponseDto(reply, emotion);
+        string? query = null;
+        if (allowSearch)
+        {
+            if (!result.TryGetProperty("searchQuery", out var queryValue) || queryValue.ValueKind != JsonValueKind.String)
+                throw InvalidResponse();
+            query = queryValue.GetString()?.Trim();
+            if (query?.Length > 300) throw InvalidResponse();
+        }
+        return new GeminiDecision(new ChatResponseDto(reply, emotion), string.IsNullOrWhiteSpace(query) ? null : query);
     }
 
     private static DeskBuddyException InvalidResponse() =>
