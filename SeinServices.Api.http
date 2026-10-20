@@ -1,4 +1,16 @@
 @SeinServices.Api_HostAddress = http://localhost:5114
+@DeskBuddyDeviceKey = REPLACE_WITH_YOUR_DEVICE_KEY
+
+### DeskBuddy - 텍스트 질문과 표정 응답
+POST {{SeinServices.Api_HostAddress}}/api/deskbuddy/chat
+Content-Type: application/json
+X-Device-Key: {{DeskBuddyDeviceKey}}
+
+{
+  "message": "안녕! 오늘은 무엇을 하고 놀까?"
+}
+
+###
 
 GET {{SeinServices.Api_HostAddress}}/weatherforecast/
 Accept: application/json

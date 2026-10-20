@@ -8,6 +8,12 @@ namespace SeinServices.Api.Swagger
         {
             var controllerNamespace = controller.ControllerType.Namespace ?? string.Empty;
 
+            if (controllerNamespace.Contains(".DeskBuddy", StringComparison.Ordinal))
+            {
+                controller.ApiExplorer.GroupName = "deskbuddy";
+                return;
+            }
+
             if (controllerNamespace.Contains(".FaultMon", StringComparison.Ordinal))
             {
                 controller.ApiExplorer.GroupName = "faultmon";

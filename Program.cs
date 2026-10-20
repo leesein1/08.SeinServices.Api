@@ -1,6 +1,9 @@
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.RateLimiting;
 using SeinServices.Api.Hubs.FaultMon;
 using SeinServices.Api.Swagger;
+using SeinServices.Api.Services.DeskBuddy;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +13,32 @@ builder.Services.AddControllers(options =>
     options.Conventions.Add(new ApiExplorerGroupConvention());
 });
 builder.Services.AddHttpClient();
+builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection("Gemini"));
+builder.Services.Configure<DeskBuddyOptions>(builder.Configuration.GetSection("DeskBuddy"));
+builder.Services.AddHttpClient<GeminiClient>(client => client.Timeout = Timeout.InfiniteTimeSpan);
+builder.Services.AddScoped<DeskBuddyService>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("deskbuddy", limiter =>
+    {
+        limiter.PermitLimit = 20;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueLimit = 0;
+        limiter.AutoReplenishment = true;
+    });
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            context.HttpContext.Response.Headers.RetryAfter = Math.Ceiling(retryAfter.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        await context.HttpContext.Response.WriteAsJsonAsync(new SeinServices.Api.Models.Common.ErrorResponseDto
+        {
+            Code = "DESKBUDDY_RATE_LIMITED",
+            Message = "DeskBuddy 요청이 많습니다. 잠시 후 다시 시도해주세요.",
+            TraceId = context.HttpContext.TraceIdentifier
+        }, cancellationToken);
+    };
+});
 builder.Services.AddSignalR();
 builder.Services.AddCors(options =>
 {
@@ -81,10 +110,18 @@ builder.Services.AddSwaggerGen(options =>
     options.DocInclusionPredicate((documentName, apiDescription) =>
         string.Equals(apiDescription.GroupName, documentName, StringComparison.Ordinal));
 
-    options.TagActionsBy(apiDescription =>
-        apiDescription.GroupName == "faultmon"
-            ? new[] { "FaultMon 고장 관제" }
-            : new[] { "청약 서비스" });
+    options.SwaggerDoc("deskbuddy", new OpenApiInfo
+    {
+        Title = "SeinServices API - DeskBuddy",
+        Version = "v1",
+        Description = "ESP32 책상 친구의 텍스트 대화 API입니다. Gemini를 호출해 대사와 표정을 반환합니다. X-Device-Key 헤더가 필요하며, 현재는 대화 기억·음성·실제 기기 제어를 포함하지 않습니다."
+    });
+    options.TagActionsBy(apiDescription => new[] { apiDescription.GroupName switch
+    {
+        "faultmon" => "FaultMon 고장 관제",
+        "deskbuddy" => "DeskBuddy",
+        _ => "청약 서비스"
+    } });
 
     options.OperationFilter<SwaggerOperationDescriptionFilter>();
     options.DocumentFilter<SwaggerTagDocumentFilter>();
@@ -97,6 +134,7 @@ app.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint("/swagger/chungyak/swagger.json", "청약 서비스");
     options.SwaggerEndpoint("/swagger/faultmon/swagger.json", "FaultMon 고장 관제");
+    options.SwaggerEndpoint("/swagger/deskbuddy/swagger.json", "DeskBuddy");
 });
 
 if (!app.Environment.IsEnvironment("Docker"))
@@ -105,9 +143,12 @@ if (!app.Environment.IsEnvironment("Docker"))
 }
 
 app.UseCors("FaultMonCors");
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<FaultMonHub>("/hubs/faultmon");
 
 app.Run();
+
+public partial class Program { }

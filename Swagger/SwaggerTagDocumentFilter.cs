@@ -7,6 +7,14 @@ namespace SeinServices.Api.Swagger
     {
         public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
         {
+            if (swaggerDoc.Info.Title.Contains("DeskBuddy", StringComparison.Ordinal))
+            {
+                swaggerDoc.Tags = new List<OpenApiTag>
+                {
+                    new() { Name = "DeskBuddy", Description = "Gemini 기반 책상 친구의 텍스트 대화 및 표정 응답 API입니다." }
+                };
+                return;
+            }
             swaggerDoc.Tags = swaggerDoc.Info.Title.Contains("FaultMon", StringComparison.Ordinal)
                 ? new List<OpenApiTag>
                 {

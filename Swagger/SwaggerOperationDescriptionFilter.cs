@@ -1,4 +1,5 @@
 using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Any;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace SeinServices.Api.Swagger
@@ -7,6 +8,7 @@ namespace SeinServices.Api.Swagger
     {
         private static readonly Dictionary<string, (string Summary, string Description)> Descriptions = new()
         {
+            ["POST api/deskbuddy/chat"] = ("책상 친구에게 질문하기", "X-Device-Key에 서버의 DeskBuddy 장치 접속 키를 입력합니다. message는 공백이 아닌 1~2000자이며, reply(최대 600자)와 emotion(neutral/happy/sad/angry/surprised)을 반환합니다. 호출마다 독립적으로 응답하며 대화 이력은 저장하지 않습니다. 서버 전체에서 분당 20회로 제한하고, Gemini 사용량 초과도 429로 반환합니다. 설정 누락은 503, 제공자 오류는 502, 시간 초과는 504입니다."),
             ["GET api/rcvhome-search/rcvhomes"] = ("청약 공고 목록 조회", "청약 공고 데이터를 검색합니다. 키워드, 접수 상태, 날짜 범위, 오늘 시작/마감 조건을 조합한 프론트의 공고 목록 화면에서 사용합니다."),
             ["GET api/rcvhome-search/deadline-soon"] = ("마감 임박 청약 공고 조회", "마감일이 가까운 청약 공고를 조회합니다. 대시보드나 알림 후보를 보여줄 때 사용하는 조회 API입니다."),
             ["GET api/rcvhome-search/rcvhomes/{pblancId}"] = ("청약 공고 상세 조회", "공고 고유번호로 단일 청약 공고의 상세 정보를 조회합니다."),
@@ -40,6 +42,25 @@ namespace SeinServices.Api.Swagger
             {
                 operation.Summary = description.Summary;
                 operation.Description = description.Description;
+            }
+
+            if (method == "POST" && path == "api/deskbuddy/chat")
+            {
+                var deviceKey = operation.Parameters.FirstOrDefault(parameter => parameter.Name == "X-Device-Key");
+                if (deviceKey != null)
+                {
+                    deviceKey.Required = true;
+                    deviceKey.Description = "서버의 DeskBuddy__DeviceApiKey 값입니다. Google Gemini 키와 다릅니다.";
+                }
+                if (operation.RequestBody?.Content.TryGetValue("application/json", out var requestMedia) == true)
+                    requestMedia.Example = new OpenApiObject { ["message"] = new OpenApiString("안녕! 오늘 좀 피곤하다.") };
+                if (operation.Responses.TryGetValue("200", out var response)
+                    && response.Content.TryGetValue("application/json", out var responseMedia))
+                    responseMedia.Example = new OpenApiObject
+                    {
+                        ["reply"] = new OpenApiString("오늘 많이 힘들었구나. 잠깐 쉬면서 이야기하자!"),
+                        ["emotion"] = new OpenApiString("sad")
+                    };
             }
 
             foreach (var parameter in operation.Parameters)

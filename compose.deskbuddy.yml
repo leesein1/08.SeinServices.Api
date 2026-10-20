@@ -1,0 +1,17 @@
+# 독립 로컬 테스트용. 기존 홈서버 컨테이너의 8080 포트와 충돌하지 않습니다.
+services:
+  deskbuddy-api:
+    build: .
+    image: seinservices-api:deskbuddy
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      Schedulers__EnableInProcess: "false"
+      FaultMon__EnableSignalRScheduler: "false"
+      Gemini__ApiKey: ${Gemini__ApiKey:-}
+      Gemini__Model: ${Gemini__Model:-gemini-3.5-flash-lite}
+      Gemini__TimeoutSeconds: ${Gemini__TimeoutSeconds:-30}
+      DeskBuddy__DeviceApiKey: ${DeskBuddy__DeviceApiKey:-}
+      DeskBuddy__CharacterName: ${DeskBuddy__CharacterName:-데스크버디}
+      DeskBuddy__Personality: ${DeskBuddy__Personality:-호기심 많고 다정한 책상 친구. 친근한 반말을 사용한다.}
