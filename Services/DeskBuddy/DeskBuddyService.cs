@@ -12,7 +12,8 @@ public sealed class DeskBuddyService(GeminiClient gemini, TavilyClient search, I
         var referenceTime = clock.GetUtcNow().ToOffset(TimeSpan.FromHours(9));
         var instruction = $"""
             기본 국가/지역은 대한민국(South Korea), 기본 시간대는 Asia/Seoul(KST, UTC+09:00)이다.
-            현재 한국 시간은 {referenceTime:yyyy-MM-dd HH:mm:ss zzz}이다.
+            현재 한국 시간은 {referenceTime:yyyy-MM-dd HH:mm:ss zzz}이며 {"일월화수목금토"[(int)referenceTime.DayOfWeek]}요일이다.
+            현재 날짜·시각·요일을 답할 때는 위 값을 기준으로 사용하고 요일을 임의로 추정하지 않는다.
             사용자가 다른 국가나 시간대를 명시하지 않으면 모든 질문을 대한민국과 한국 시간 기준으로 해석한다.
             오늘, 어제, 내일, 이번 주 등 상대적인 날짜도 위 한국 시각 기준으로 해석한다.
             사용자가 지정한 과거/미래 날짜나 기간은 그대로 존중하며 현재 날짜로 바꾸지 않는다.

@@ -211,6 +211,7 @@ public sealed class DeskBuddyTests
         Assert.Contains("대한민국", instructions);
         Assert.Contains("Asia/Seoul", instructions);
         Assert.Contains("2026-10-20 21:00:00 +09:00", instructions);
+        Assert.Contains("화요일", instructions);
     }
 
     [Fact]
