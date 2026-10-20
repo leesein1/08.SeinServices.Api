@@ -111,7 +111,7 @@ cd C:\workspace_silee\home-server
 docker compose up -d --no-deps --pull never --force-recreate seinservices-api
 ```
 
-이 이미지는 로컬에서 빌드했으며 레지스트리에 푸시하지 않았습니다. `deskbuddy.env`의 비밀 값은 소스에 복사하지 마세요. 이전 API 이미지 `silee98/seinservices-api:1.0.10`도 로컬에 유지됩니다.
+운영 이미지 `silee98/seinservices-api:deskbuddy-20261020`은 Docker Hub에도 게시되어 다른 호스트에서 내려받을 수 있습니다. `main` 브랜치의 GitHub Actions는 별도로 `latest`와 commit SHA 태그를 게시합니다. `deskbuddy.env`의 비밀 값은 소스에 복사하지 마세요. 이전 API 이미지 `silee98/seinservices-api:1.0.10`도 로컬에 유지됩니다.
 
 #### 검증
 
